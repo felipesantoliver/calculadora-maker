@@ -1,0 +1,8 @@
+{
+  "name": "precificador-3d",
+  "version": "1.0.0",
+  "description": "Calculadora de Precificação 3D & Projetos",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}

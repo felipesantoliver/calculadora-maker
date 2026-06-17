@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="transition-colors duration-300">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Precificação - Impressão 3D & Projetos</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js para os gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons para interface moderna -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Estilos customizados -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 flex flex-col md:flex-row min-h-screen transition-colors duration-300">
+
+    <!-- ==============================================
+         SIDEBAR (Menu Lateral)
+         ============================================== -->
+    <aside id="sidebar" class="hidden md:flex flex-col w-64 bg-slate-900 text-white min-h-screen p-4 flex-shrink-0 transition-all duration-300">
+        <!-- Logotipo -->
+        <div class="flex items-center gap-3 px-2 py-4 mb-6 border-b border-slate-800">
+            <div class="p-2 bg-indigo-600 rounded-lg">
+                <i data-lucide="calculator" class="w-6 h-6 text-white"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-sm leading-none">Calculadora de</h1>
+                <span class="text-xs text-indigo-400 font-semibold">Precificação Híbrida</span>
+            </div>
+        </div>
+
+        <!-- Menu de Navegação -->
+        <nav class="flex-1 space-y-1">
+            <button onclick="UI.switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-800 text-slate-400">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                <span>Dashboard</span>
+            </button>
+            <button onclick="UI.switchTab('precificar')" id="nav-precificar" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-800 text-slate-400">
+                <i data-lucide="coins" class="w-5 h-5"></i>
+                <span>Precificar</span>
+            </button>
+            <button onclick="UI.switchTab('historico')" id="nav-historico" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-800 text-slate-400">
+                <i data-lucide="history" class="w-5 h-5"></i>
+                <span>Histórico</span>
+            </button>
+            <button onclick="UI.switchTab('configuracoes')" id="nav-configuracoes" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-800 text-slate-400">
+                <i data-lucide="settings" class="w-5 h-5"></i>
+                <span>Configurações</span>
+            </button>
+        </nav>
+
+        <!-- Assinatura Personalizada -->
+        <div class="pt-4 border-t border-slate-800 flex flex-col gap-2">
+            <div class="leading-none">
+                <span class="text-[9px] tracking-[0.25em] text-slate-500 uppercase block mb-1">Criado por</span>
+                <span class="font-serif italic text-sm text-indigo-300 tracking-wide block">felipe sant'oliver</span>
+            </div>
+            <p class="text-[10px] text-slate-600">&copy; 2026 Precificação 3D</p>
+        </div>
+    </aside>
+
+    <!-- ==============================================
+         ÁREA PRINCIPAL DE CONTEÚDO
+         ============================================== -->
+    <main class="flex-1 flex flex-col min-h-screen overflow-x-hidden pb-20 md:pb-6">
+        
+        <!-- Cabeçalho (Mobile / Global) -->
+        <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex items-center justify-between sticky top-0 z-10 transition-colors duration-300">
+            <!-- Logotipo Mobile -->
+            <div class="flex items-center gap-3 md:hidden">
+                <div class="p-1.5 bg-indigo-600 rounded-lg text-white">
+                    <i data-lucide="calculator" class="w-5 h-5"></i>
+                </div>
+                <h1 class="font-bold text-sm sm:text-base text-slate-900 dark:text-white">Calculadora de Precificação</h1>
+            </div>
+            
+            <div class="hidden md:block">
+                <h2 id="header-title" class="text-xl font-bold text-slate-800 dark:text-white">Dashboard</h2>
+                <p id="header-subtitle" class="text-xs text-slate-500 dark:text-slate-400">Métricas gerais e saúde de todos os seus serviços.</p>
+            </div>
+
+            <!-- Alternância de Tema & Status da Engine -->
+            <div class="flex items-center gap-3">
+                <button onclick="UI.toggleTheme()" class="p-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 flex items-center justify-center">
+                    <i data-lucide="sun" class="w-5 h-5 hidden dark:block text-amber-400"></i>
+                    <i data-lucide="moon" class="w-5 h-5 block dark:hidden text-slate-600"></i>
+                </button>
+
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Engine Híbrida Ativa
+                </span>
+            </div>
+        </header>
+
+        <!-- CONTEÚDO SCROLLABLE -->
+        <div class="p-4 md:p-6 flex-1 max-w-7xl w-full mx-auto">
+            
+            <!-- TOAST BANNER PARA NOTIFICAÇÕES -->
+            <div id="toast" class="hidden fixed bottom-24 right-6 md:bottom-6 md:right-6 bg-slate-900 dark:bg-slate-800 border border-slate-800 dark:border-slate-700 text-white text-sm py-3 px-5 rounded-xl shadow-xl z-50 flex items-center gap-3 animate-bounce">
+                <i data-lucide="info" class="w-5 h-5 text-indigo-400"></i>
+                <span id="toast-message">Mensagem padrão.</span>
+            </div>
+
+            <!-- ==============================================
+                 1. TELA: DASHBOARD
+                 ============================================== -->
+            <div id="tab-dashboard" class="tab-content space-y-6">
+                <!-- KPIs Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- KPI 1 -->
+                    <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Lucro Total Acumulado</p>
+                            <h3 id="kpi-lucro-total" class="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">R$ 0,00</h3>
+                            <p class="text-xs text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1">
+                                <i data-lucide="trending-up" class="w-3.5 h-3.5"></i> Receita real de serviços e peças
+                            </p>
+                        </div>
+                        <div class="p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl text-emerald-600 dark:text-emerald-400">
+                            <i data-lucide="dollar-sign" class="w-7 h-7"></i>
+                        </div>
+                    </div>
+
+                    <!-- KPI 2 -->
+                    <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Margem Média Geral</p>
+                            <h3 id="kpi-margem-media" class="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">0.0%</h3>
+                            <p class="text-xs text-indigo-600 dark:text-indigo-400 mt-1 flex items-center gap-1">
+                                <i data-lucide="percent" class="w-3.5 h-3.5"></i> Rentabilidade média do portfólio
+                            </p>
+                        </div>
+                        <div class="p-4 bg-indigo-50 dark:bg-indigo-950/30 rounded-2xl text-indigo-600 dark:text-indigo-400">
+                            <i data-lucide="activity" class="w-7 h-7"></i>
+                        </div>
+                    </div>
+
+                    <!-- KPI 3 -->
+                    <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between sm:col-span-2 lg:col-span-1">
+                        <div>
+                            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Taxa de Ocorrências / Perdas</p>
+                            <h3 id="kpi-pecas-perdidas" class="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">0%</h3>
+                            <p class="text-xs text-rose-600 dark:text-rose-400 mt-1 flex items-center gap-1">
+                                <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> Falhas ou refações de peças
+                            </p>
+                        </div>
+                        <div class="p-4 bg-rose-50 dark:bg-rose-950/30 rounded-2xl text-rose-600 dark:text-rose-400">
+                            <i data-lucide="skull" class="w-7 h-7"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filtros Gerais do Dashboard -->
+                <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-wrap gap-4 items-center justify-between">
+                    <h4 class="font-semibold text-sm text-slate-700 dark:text-slate-300">Filtros Operacionais</h4>
+                    <div class="flex flex-wrap gap-3 items-center w-full sm:w-auto">
+                        <select id="dash-filter-period" onchange="Charts.updateDashboard()" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 w-full sm:w-auto outline-none">
+                            <option value="todos">Todos os Períodos</option>
+                            <option value="7d">Últimos 7 dias</option>
+                            <option value="30d">Últimos 30 dias</option>
+                        </select>
+                        <select id="dash-filter-type" onchange="Charts.updateDashboard()" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 w-full sm:w-auto outline-none">
+                            <option value="todos">Todos os Serviços</option>
+                            <option value="3d">Apenas Impressão 3D</option>
+                            <option value="projeto">Apenas Projetos / Engenharia</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Seção de Gráficos -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Gráfico 1: Finanças -->
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                        <h4 class="font-bold text-slate-800 dark:text-slate-200 mb-4">Receita vs Lucro Real</h4>
+                        <div class="relative h-64 w-full">
+                            <canvas id="financeChart"></canvas>
+                        </div>
+                    </div>
+                    <!-- Gráfico 2: Divisão por tipo de serviço ou perdas -->
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                        <h4 class="font-bold text-slate-800 dark:text-slate-200 mb-4">Distribuição de Receita por Categoria</h4>
+                        <div class="relative h-64 w-full flex justify-center">
+                            <canvas id="typeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==============================================
+                 2. TELA: PRECIFICAÇÃO (HÍBRIDA)
+                 ============================================== -->
+            <div id="tab-precificar" class="tab-content hidden space-y-6">
+                <!-- Seletor de Tipo de Serviço -->
+                <div class="flex justify-center md:justify-start">
+                    <div class="bg-slate-200 dark:bg-slate-800 p-1 rounded-2xl flex gap-1">
+                        <button onclick="UI.toggleServiceMode('3d')" id="btn-mode-3d" class="px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 text-indigo-600 bg-white dark:bg-slate-900 shadow-sm">
+                            <i data-lucide="printer" class="w-4 h-4"></i>
+                            <span>Manufatura & Impressão 3D</span>
+                        </button>
+                        <button onclick="UI.toggleServiceMode('projeto')" id="btn-mode-projeto" class="px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                            <i data-lucide="drafting-compass" class="w-4 h-4"></i>
+                            <span>Projeto de Engenharia / Consultoria</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    <!-- Painel de Inputs (Col 7) -->
+                    <div class="lg:col-span-7 space-y-6">
+                        
+                        <!-- FORMULÁRIO 1: IMPRESSÃO 3D -->
+                        <div id="inputs-3d" class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
+                            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+                                <h3 class="font-bold text-lg text-slate-800 dark:text-white">Parâmetros da Impressora 3D</h3>
+                                <span class="text-xs text-indigo-500 dark:text-indigo-400 font-medium bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-1 rounded-full">Atualização Instantânea</span>
+                            </div>
+
+                            <!-- Nome da peça e Cliente -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Nome da Peça</label>
+                                    <input type="text" id="calc-peca-nome" value="Peça Exemplo 3D" oninput="UI.calculatePrice()" class="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 py-3 px-4 text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-indigo-500 sm:text-sm font-semibold outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Nome do Cliente</label>
+                                    <input type="text" id="calc-cliente-nome" value="Felipe Oliver" oninput="UI.calculatePrice()" class="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 py-3 px-4 text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-indigo-500 sm:text-sm font-semibold outline-none">
+                                </div>
+                            </div>
+
+                            <!-- Linha 1: Peso e Tempo -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Peso da Peça (g)</label>
+                                    <div class="relative rounded-xl shadow-sm">
+                                        <input type="number" id="calc-peso" value="50" min="0" step="1" oninput="UI.calculatePrice()" class="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 py-3 pl-4 pr-12 text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-indigo-500 sm:text-sm font-bold outline-none">
+                                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+                                            <span class="text-slate-400 sm:text-sm">g</span>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-slate-400 mt-1">Peso da peça estimado no fatiador.</p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Tempo de Impressão (h)</label>
+                                    <div class="relative rounded-xl shadow-sm">
+                                        <input type="number" id="calc-tempo" value="4" min="0" step="0.1" oninput="UI.calculatePrice()" class="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 py-3 pl-4 pr-12 text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-indigo-500 sm:text-sm font-bold outline-none">
+                                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+                                            <span class="text-slate-400 sm:text-sm">h</span>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-slate-400 mt-1">Tempo estimado de runtime de máquina.</p>
+                                </div>
+                            </div>
+
+                            <!-- Linha 2: Material e Complexidade -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Material / Filamento</label>
+                                    <select id="calc-material" onchange="UI.calculatePrice()" class="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3 text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-indigo-500 sm:text-sm font-bold outline-none">
+                                        <!-- Carregado via JS -->
+                                    </select>
+                                    <p class="text-xs text-indigo-500 dark:text-indigo-400 mt-1 cursor-pointer hover:underline" onclick="UI.switchTab('configuracoes')">+ Cadastrar novo filamento</p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Complexidade da Peça</label>
+                                    <select id="calc-complexidade" onchange="UI.calculatePrice()" class="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3 text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-indigo-500 sm:text-sm font-bold outline-none">
+                                        <option value="1">Nível 1 (Simples - Mult 1.0)</option>
+                                        <option value="2" selected>Nível 2 (Intermediário - Mult 1.5)</option>
+                                        <option value="3">Nível 3 (Avançado - Mult 2.2 a 2.5)</option>
+                                    </select>
+                                    <p class="text-xs text-slate-400 mt-1">Multiplicador da mão de obra de fatiamento.</p>
+                                </div>
+                            </div>
+
+                            <!-- Linha 3: Tipo de Encomenda -->
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Classificação de Peça</label>
+                                <div class="grid grid-cols-3 gap-3">
+                                    <label class="cursor-pointer border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-xl p-3 flex flex-col items-center gap-1.5 transition-all text-center" id="lbl-tipo-normal">
+                                        <input type="radio" name="calc-tipo" value="normal" checked onchange="UI.handleTypeChange('normal')" class="sr-only">
+                                        <i data-lucide="package" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
+                                        <span class="text-xs font-semibold">Normal</span>
+                                    </label>
+                                    <label class="cursor-pointer border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-xl p-3 flex flex-col items-center gap-1.5 transition-all text-center" id="lbl-tipo-brinde">
+                                        <input type="radio" name="calc-tipo" value="brinde" onchange="UI.handleTypeChange('brinde')" class="sr-only">
+                                        <i data-lucide="gift" class="w-5 h-5 text-amber-500"></i>
+                                        <span class="text-xs font-semibold">Brinde</span>
+                                    </label>
+                                    <label class="cursor-pointer border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-xl p-3 flex flex-col items-center gap-1.5 transition-all text-center" id="lbl-tipo-perdida">
+                                        <input type="radio" name="calc-tipo" value="perdida" onchange="UI.handleTypeChange('perdida')" class="sr-only">
+                                        <i data-lucide="frown" class="w-5 h-5 text-rose-500"></i>
+                                        <span class="text-xs font-semibold">Peça Perdida</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Valor de Venda Real Opcional -->
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Valor de Venda Real Praticado (Opcional - R$)</label>
+                                <input type="number" id="calc-preco-real-input" placeholder="Ex: 47,90" oninput="UI.calculatePrice()" class="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 py-3 px-4 text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-indigo-500 sm:text-sm font-semibold outline-none">
+                                <p class="text-xs text-slate-400 mt-1">Ao informar, o relatório Markdown inclui o comparativo de desempenho do cenário real.</p>
+                            </div>
+                        </div>
+
+                        <!-- FORMULÁRIO 2: PROJETO DE ENGENHARIA -->
+                        <div id="inputs-projeto" class="hidden bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
+                            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+                                <h3 class="font-bold text-lg text-slate-800 dark:text-white">Escopo de Projeto & Engenharia</h3>
+                                <span class="text-xs text-indigo-500 dark:text-indigo-400 font-medium bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-1 rounded-full">Atualização Instantânea</span>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Horas de Engenharia / Criação</label>
+                                    <div class="relative rounded-xl shadow-sm">
+                                        <input type="number" id="proj-horas" value="10" min="0" step="1" oninput="UI.calculatePrice()" class="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 py-3 pl-4 pr-12 text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-indigo-500 sm:text-sm font-bold outline-none">
+                                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+                                            <span class="text-slate-400 sm:text-sm">h</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Despesas Operacionais Diretas (R$)</label>
+                                    <div class="relative rounded-xl shadow-sm">
+                                        <input type="number" id="proj-custo-direto" value="150" min="0" step="5" oninput="UI.calculatePrice()" class="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 py-3 pl-4 pr-12 text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-indigo-500 sm:text-sm font-bold outline-none">
+                                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+                                            <span class="text-slate-400 sm:text-sm">R$</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Complexidade do Projeto</label>
+                                    <select id="proj-complexidade" onchange="UI.calculatePrice()" class="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3 text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-indigo-500 sm:text-sm font-bold outline-none">
+                                        <option value="1">Nível 1 (Projetos Simples - Multiplicador 1.0)</option>
+                                        <option value="2" selected>Nível 2 (Intermediário - Multiplicador 1.5)</option>
+                                        <option value="3">Nível 3 (Avançado / Especializado)</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Engenheiro / Profissional Dedicado</label>
+                                    <div class="p-3 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-between">
+                                        <div>
+                                            <p class="text-xs font-bold text-slate-900 dark:text-slate-200">Hora Técnica Base</p>
+                                        </div>
+                                        <span id="proj-lbl-hora-base" class="font-extrabold text-indigo-600 dark:text-indigo-400 text-sm">R$ 50,00/h</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Special Alert for Gifts/Losses -->
+                        <div id="special-rule-alert" class="hidden p-4 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 flex gap-3 items-start">
+                            <i data-lucide="sparkles" class="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5"></i>
+                            <div>
+                                <h5 class="text-sm font-semibold text-amber-800 dark:text-amber-300">Regra de Precificação Especial Ativada</h5>
+                                <p id="special-rule-text" class="text-xs text-amber-700 dark:text-amber-400 mt-1">Cálculo modificado: Isento de Energia e CAPEX. Taxa de Manutenção calculada sobre o material puro.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Painel de Output (Col 5) -->
+                    <div class="lg:col-span-5 space-y-6">
+                        <div class="bg-indigo-950 text-white p-6 rounded-3xl shadow-lg border border-indigo-900 flex flex-col justify-between h-full relative overflow-hidden">
+                            <!-- Background decoration -->
+                            <div class="absolute -right-16 -top-16 w-48 h-48 bg-indigo-600 rounded-full opacity-10 filter blur-xl"></div>
+                            <div class="absolute -left-16 -bottom-16 w-48 h-48 bg-emerald-500 rounded-full opacity-10 filter blur-xl"></div>
+
+                            <div class="relative space-y-6 z-10">
+                                <h3 id="panel-title-finance" class="font-bold text-lg text-slate-300 border-b border-indigo-900 pb-4">Detalhamento Financeiro</h3>
+                                
+                                <div id="breakdown-container" class="space-y-3.5 text-sm">
+                                    <!-- Carregado via Javascript -->
+                                </div>
+                            </div>
+
+                            <!-- Botões de Ação -->
+                            <div class="relative z-10 pt-6 space-y-3">
+                                <button id="btn-copy-markdown" onclick="UI.generateMarkdown()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md">
+                                    <i data-lucide="copy" class="w-4 h-4"></i>
+                                    <span>Copiar Markdown</span>
+                                </button>
+                                
+                                <button onclick="UI.openSaveModal()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 px-6 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-emerald-950/20">
+                                    <i data-lucide="save" class="w-5 h-5"></i>
+                                    <span>Salvar no Histórico</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ==============================================
+                 3. TELA: HISTÓRICO
+                 ============================================== -->
+            <div id="tab-historico" class="tab-content hidden space-y-6">
+                <!-- Filtros e Busca de Registros -->
+                <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="flex-1 min-w-0">
+                        <h3 class="font-bold text-lg text-slate-800 dark:text-white">Histórico Geral de Cobranças</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Gerenciamento consolidado de peças fabricadas e projetos consultivos desenvolvidos.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-3 items-center">
+                        <div class="relative w-full sm:w-auto">
+                            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                            <input type="text" id="hist-search-client" oninput="UI.applyHistoryFilters()" placeholder="Buscar cliente ou peça..." class="pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-xl text-sm w-full focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-slate-900 outline-none">
+                        </div>
+                        <select id="hist-filter-period" onchange="UI.applyHistoryFilters()" class="border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-850 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 w-full sm:w-auto outline-none">
+                            <option value="todos">Todos os Períodos</option>
+                            <option value="7d">Últimos 7 dias</option>
+                            <option value="30d">Últimos 30 dias</option>
+                        </select>
+                        <select id="hist-filter-type" onchange="UI.applyHistoryFilters()" class="border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-850 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 w-full sm:w-auto outline-none">
+                            <option value="todos">Todos os Serviços</option>
+                            <option value="3d">Apenas Impressão 3D</option>
+                            <option value="projeto">Apenas Projetos</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Tabela de Histórico Híbrida -->
+                <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                    <th class="px-6 py-4 cursor-pointer" onclick="UI.sortHistory('nome')">Peça / Escopo</th>
+                                    <th class="px-6 py-4">Categoria / Insumo</th>
+                                    <th class="px-6 py-4 text-right cursor-pointer" onclick="UI.sortHistory('tempo')">Volumetria / Tempo</th>
+                                    <th class="px-6 py-4 text-right cursor-pointer" onclick="UI.sortHistory('custo_total')">Custo de Operação</th>
+                                    <th class="px-6 py-4 text-right cursor-pointer" onclick="UI.sortHistory('preco_vendido')">Preço Vendido</th>
+                                    <th class="px-6 py-4 text-right cursor-pointer" onclick="UI.sortHistory('margem')">Lucro Real / Margem</th>
+                                    <th class="px-6 py-4 text-center">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-table-body" class="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
+                                <!-- Preenchido dinamicamente via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="history-empty-state" class="hidden p-12 text-center flex flex-col items-center justify-center">
+                        <div class="p-4 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-full mb-4">
+                            <i data-lucide="archive-x" class="w-8 h-8"></i>
+                        </div>
+                        <h4 class="font-bold text-slate-800 dark:text-slate-200">Sem correspondências no histórico</h4>
+                        <p class="text-xs text-slate-400 mt-1 max-w-sm">Dica: Use o painel Precificar para criar novos registros.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==============================================
+                 4. TELA: CONFIGURAÇÕES + MATERIAIS
+                 ============================================== -->
+            <div id="tab-configuracoes" class="tab-content hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    <!-- Configurações Globais da Engine Híbrida -->
+                    <div class="lg:col-span-5 space-y-6">
+                        <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
+                            <div class="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+                                <div class="p-2 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-lg">
+                                    <i data-lucide="cpu" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-slate-800 dark:text-white">Variáveis Gerais de Impressão</h3>
+                                    <p class="text-xs text-slate-400">Garante a integridade do Capex, Energia e Mão de obra da impressora.</p>
+                                </div>
+                            </div>
+
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Custo de Energia (R$/Hora)</label>
+                                    <input type="number" id="cfg-energia" step="0.01" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2.5 text-sm font-semibold text-slate-900 dark:text-slate-100 outline-none">
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">CAPEX Base (R$ a cada 50g)</label>
+                                    <input type="number" id="cfg-capex" step="0.1" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2.5 text-sm font-semibold text-slate-900 dark:text-slate-100 outline-none">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Manutenção da Impressora (% sobre total)</label>
+                                    <input type="number" id="cfg-manutencao" step="0.1" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2.5 text-sm font-semibold text-slate-900 dark:text-slate-100 outline-none">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mão de Obra do Operador (R$/Hora fatiador/setup)</label>
+                                    <input type="number" id="cfg-mao-obra" step="0.5" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2.5 text-sm font-semibold text-slate-900 dark:text-slate-100 outline-none">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Multiplicador Complexidade N3 (Avançado)</label>
+                                    <input type="number" id="cfg-mult-n3" step="0.1" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2.5 text-sm font-semibold text-slate-900 dark:text-slate-100 outline-none">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Preço Mínimo (R$)</label>
+                                    <input type="number" id="cfg-preco-minimo" step="0.5" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2.5 text-sm font-semibold text-slate-900 dark:text-slate-100 outline-none">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Configurações Projetos -->
+                        <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
+                            <div class="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+                                <div class="p-2 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-lg">
+                                    <i data-lucide="drafting-compass" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-slate-800 dark:text-white">Variáveis para Projetos / Consultorias</h3>
+                                    <p class="text-xs text-slate-400">Defina os honorários para precificação técnica.</p>
+                                </div>
+                            </div>
+
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Hora Técnica Engenheiro/Consultor Base (R$/h)</label>
+                                    <input type="number" id="cfg-proj-hora-base" step="1" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2.5 text-sm font-semibold text-slate-900 dark:text-slate-100 outline-none">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Multiplicador Complexidade N3 (Alto Risco)</label>
+                                    <input type="number" id="cfg-proj-mult-n3" step="0.1" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2.5 text-sm font-semibold text-slate-900 dark:text-slate-100 outline-none">
+                                </div>
+                            </div>
+
+                            <button onclick="UI.saveEngineConfigs()" class="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-indigo-600 dark:hover:bg-indigo-700 font-bold py-2.5 rounded-xl text-xs transition-all">
+                                Salvar Todas as Configurações da Engine
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Gestão de Cadastros de Materiais -->
+                    <div class="lg:col-span-7 space-y-6">
+                        <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
+                            
+                            <!-- Header & Abre Form -->
+                            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="p-2 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-lg">
+                                        <i data-lucide="layers" class="w-5 h-5"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-slate-800 dark:text-white">Cadastro de Materiais (Filamentos)</h3>
+                                        <p class="text-xs text-slate-400">Banco de dados para cálculos de custo por grama de insumo.</p>
+                                    </div>
+                                </div>
+                                <button onclick="UI.toggleAddMaterialForm()" class="bg-indigo-600 hover:bg-indigo-700 text-white p-1.5 rounded-lg flex items-center justify-center transition-all">
+                                    <i data-lucide="plus" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+
+                            <!-- Formulário Oculto de Cadastro de Filamento -->
+                            <div id="add-material-form" class="hidden bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-4 animate-fadeIn">
+                                <h4 class="font-bold text-xs text-slate-700 dark:text-slate-300 uppercase tracking-wider">Novo Filamento</h4>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">Tipo de Material</label>
+                                        <select id="mat-tipo" class="w-full bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg p-1.5 text-xs font-semibold outline-none">
+                                            <option value="PLA">PLA</option>
+                                            <option value="PETG">PETG</option>
+                                            <option value="ABS">ABS</option>
+                                            <option value="FLEX">FLEX</option>
+                                            <option value="OUTRO">OUTRO</option>
+                                        </select>
+                                    </div>
+                                    <div class="sm:col-span-2">
+                                        <label class="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">Marca / Fornecedor</label>
+                                        <input type="text" id="mat-marca" placeholder="Ex: Creality, 3D Prime" class="w-full bg-white dark:bg-slate-900 text-slate-850 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg p-1.5 text-xs font-semibold outline-none">
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">Forma de Compra</label>
+                                        <input type="text" id="mat-forma" placeholder="Ex: Carretel" class="w-full bg-white dark:bg-slate-900 text-slate-850 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg p-1.5 text-xs font-semibold outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">Peso Total (g)</label>
+                                        <input type="number" id="mat-peso" value="1000" class="w-full bg-white dark:bg-slate-900 text-slate-850 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg p-1.5 text-xs font-semibold outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">Preço Total (R$)</label>
+                                        <input type="number" id="mat-preco" value="120" class="w-full bg-white dark:bg-slate-900 text-slate-850 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg p-1.5 text-xs font-semibold outline-none">
+                                    </div>
+                                </div>
+
+                                <div class="flex justify-end gap-2">
+                                    <button onclick="UI.toggleAddMaterialForm()" class="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold transition-all">Cancelar</button>
+                                    <button onclick="UI.addNewMaterial()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all">Adicionar</button>
+                                </div>
+                            </div>
+
+                            <!-- Listagem de Materiais -->
+                            <div class="space-y-3" id="materials-list-container">
+                                <!-- Preenchido dinamicamente via Javascript -->
+                            </div>
+
+                            <!-- Botão de Backup -->
+                            <div class="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                <button onclick="Storage.exportBackup()" class="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-2.5 rounded-xl text-xs transition-all flex items-center justify-center gap-2">
+                                    <i data-lucide="download" class="w-4 h-4"></i> Exportar Backup
+                                </button>
+                                <button onclick="document.getElementById('import-backup-input').click()" class="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-2.5 rounded-xl text-xs transition-all flex items-center justify-center gap-2">
+                                    <i data-lucide="upload" class="w-4 h-4"></i> Importar Backup
+                                </button>
+                                <input type="file" id="import-backup-input" accept=".json" class="hidden" onchange="UI.importBackupFile(event)">
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- MENU MOBILE -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-6 py-2.5 flex justify-between items-center z-40 shadow-xl transition-colors duration-300">
+        <button onclick="UI.switchTab('dashboard')" id="mobile-nav-dashboard" class="mobile-nav-btn flex flex-col items-center gap-1 text-slate-400">
+            <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+            <span class="text-[10px] font-semibold">Dashboard</span>
+        </button>
+        <button onclick="UI.switchTab('precificar')" id="mobile-nav-precificar" class="mobile-nav-btn flex flex-col items-center gap-1 text-slate-400">
+            <i data-lucide="coins" class="w-5 h-5"></i>
+            <span class="text-[10px] font-semibold">Precificar</span>
+        </button>
+        <button onclick="UI.switchTab('historico')" id="mobile-nav-historico" class="mobile-nav-btn flex flex-col items-center gap-1 text-slate-400">
+            <i data-lucide="history" class="w-5 h-5"></i>
+            <span class="text-[10px] font-semibold">Histórico</span>
+        </button>
+        <button onclick="UI.switchTab('configuracoes')" id="mobile-nav-configuracoes" class="mobile-nav-btn flex flex-col items-center gap-1 text-slate-400">
+            <i data-lucide="settings" class="w-5 h-5"></i>
+            <span class="text-[10px] font-semibold">Config</span>
+        </button>
+    </nav>
+
+    <!-- ==============================================
+         MODAL: SALVAR NO HISTÓRICO
+         ============================================== -->
+    <div id="save-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md p-6 border border-slate-100 dark:border-slate-800 shadow-2xl relative animate-fadeIn transition-colors duration-300">
+            
+            <button onclick="UI.closeSaveModal()" class="absolute right-4 top-4 p-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-400 hover:text-slate-650 transition-all outline-none">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <h3 class="font-bold text-lg text-slate-800 dark:text-white mb-2">Registrar Item Financeiro</h3>
+            <p class="text-xs text-slate-400 mb-6">Complete os dados contratuais para salvar o faturamento correspondente.</p>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Nome da Peça ou Projeto *</label>
+                    <input type="text" id="modal-nome" placeholder="Ex: Projeto Mecânico Redutor, Busto Yoda" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2.5 text-sm font-semibold focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-slate-100 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Cliente Solicitante *</label>
+                    <input type="text" id="modal-cliente" placeholder="Ex: Interno, João Silva, Indústrias Rossi" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2.5 text-sm font-semibold focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-slate-100 outline-none">
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300">Valor Cobrado Praticado (R$)</label>
+                        <span class="text-[10px] text-indigo-500 dark:text-indigo-400 font-semibold cursor-pointer hover:underline" onclick="UI.copyPresetPrice()">Copiar Margem 150%</span>
+                    </div>
+                    <input type="number" id="modal-preco-real" step="0.5" placeholder="Caso em branco, adota margem de 150%" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2.5 text-sm font-semibold focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-slate-100 outline-none">
+                </div>
+            </div>
+
+            <!-- Resumo Financeiro no Modal -->
+            <div class="mt-5 p-4 bg-indigo-50 dark:bg-indigo-950/40 rounded-2xl flex justify-between items-center">
+                <div>
+                    <span class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wide">Custo Base</span>
+                    <p class="text-lg font-bold text-indigo-950 dark:text-indigo-200" id="modal-preview-custo">R$ 0,00</p>
+                </div>
+                <div class="text-right">
+                    <span class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wide">Preço (150%)</span>
+                    <p class="text-lg font-bold text-slate-900 dark:text-slate-100" id="modal-preview-venda">R$ 0,00</p>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3">
+                <button onclick="UI.closeSaveModal()" class="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-sm font-bold transition-all text-slate-600 dark:text-slate-300">Cancelar</button>
+                <button onclick="UI.savePieceRecord()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-lg shadow-indigo-600/15">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    <span>Confirmar Registro</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: EDIÇÃO DE REGISTRO -->
+    <div id="edit-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md p-6 border border-slate-100 dark:border-slate-800 shadow-2xl relative animate-fadeIn transition-colors duration-300">
+            <button onclick="UI.closeEditModal()" class="absolute right-4 top-4 p-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-400 hover:text-slate-650 transition-all outline-none">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <h3 class="font-bold text-lg text-slate-800 dark:text-white mb-2">Editar Registro</h3>
+            <input type="hidden" id="edit-id">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Nome</label>
+                    <input type="text" id="edit-nome" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2.5 text-sm font-semibold focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-slate-100 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Cliente</label>
+                    <input type="text" id="edit-cliente" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2.5 text-sm font-semibold focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-slate-100 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Preço Vendido (R$)</label>
+                    <input type="number" id="edit-preco-real" step="0.5" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2.5 text-sm font-semibold focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-slate-100 outline-none">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button onclick="UI.closeEditModal()" class="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-sm font-bold transition-all text-slate-600 dark:text-slate-300">Cancelar</button>
+                <button onclick="UI.saveEditRecord()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-all flex items-center gap-2">
+                    <i data-lucide="save" class="w-4 h-4"></i> Salvar Alterações
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: TEMPLATES DE ORÇAMENTO -->
+    <div id="template-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md p-6 border border-slate-100 dark:border-slate-800 shadow-2xl relative animate-fadeIn transition-colors duration-300">
+            <button onclick="UI.closeTemplateModal()" class="absolute right-4 top-4 p-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-400 hover:text-slate-650 transition-all outline-none">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <h3 class="font-bold text-lg text-slate-800 dark:text-white mb-4">Copiar Orçamento</h3>
+            <div class="space-y-3">
+                <button onclick="UI.copyTemplate('whatsapp')" class="w-full p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/40 rounded-xl text-left hover:bg-green-100 dark:hover:bg-green-950/40 transition-all">
+                    <span class="text-sm font-bold text-green-800 dark:text-green-300">WhatsApp</span>
+                    <p class="text-xs text-green-600 dark:text-green-400 mt-1">Mensagem rápida para WhatsApp</p>
+                </button>
+                <button onclick="UI.copyTemplate('email')" class="w-full p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 rounded-xl text-left hover:bg-blue-100 dark:hover:bg-blue-950/40 transition-all">
+                    <span class="text-sm font-bold text-blue-800 dark:text-blue-300">E-mail</span>
+                    <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">Texto formal para e-mail</p>
+                </button>
+                <button onclick="UI.copyTemplate('simples')" class="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-left hover:bg-slate-100 dark:hover:bg-slate-700 transition-all">
+                    <span class="text-sm font-bold text-slate-800 dark:text-slate-200">Simples</span>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Apenas o valor</p>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CONFIRMAÇÃO CUSTOMIZADA -->
+    <div id="confirm-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-6 border border-slate-100 dark:border-slate-800 shadow-2xl animate-fadeIn transition-colors duration-300">
+            <div class="flex items-center gap-3 text-amber-500 mb-3">
+                <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                <h3 class="font-bold text-lg text-slate-800 dark:text-white" id="confirm-title">Confirmar Ação</h3>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-6" id="confirm-message">Você tem certeza que deseja realizar essa operação?</p>
+            <div class="flex justify-end gap-3">
+                <button id="confirm-cancel-btn" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 transition-all">Cancelar</button>
+                <button id="confirm-ok-btn" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS MODULARES -->
+    <script src="js/utils.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/engine.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/templates.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

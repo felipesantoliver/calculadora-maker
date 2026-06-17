@@ -1,0 +1,14 @@
+body { font-family: 'Inter', sans-serif; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }
+.dark ::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.dark ::-webkit-scrollbar-thumb { background: #475569; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* Modo Rápido (mobile) */
+.quick-mode .complexidade-field,
+.quick-mode .tipo-encomenda,
+.quick-mode .cliente-field,
+.quick-mode .preco-real-field { display: none; }
+.validation-error { @apply ring-2 ring-rose-500 border-rose-500; }
