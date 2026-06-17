@@ -2,6 +2,14 @@ const UI = {
   sortColumn: 'data',
   sortDirection: 'desc',
 
+  // ----- LOADER -----
+  showLoader() {
+    document.getElementById('app-loader').classList.remove('hidden');
+  },
+  hideLoader() {
+    document.getElementById('app-loader').classList.add('hidden');
+  },
+
   switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
     const activeTab = document.getElementById('tab-' + tabId);
@@ -97,12 +105,42 @@ const UI = {
     UI.calculatePrice();
   },
 
+  // ----- CÁLCULO (desacoplado) -----
   calculatePrice() {
-    if (window.currentServiceMode === '3d') Engine.calculate3DPrice();
-    else Engine.calculateProjectPrice();
+    const params = this.getCurrentParams();
+    let resultado;
+    if (window.currentServiceMode === '3d') {
+      resultado = Engine.calculate3DPrice(params);
+      this.render3DBreakdown(resultado);
+    } else {
+      resultado = Engine.calculateProjectPrice(params);
+      this.renderProjectBreakdown(resultado);
+    }
+    window.currentCalculatedResults = resultado;
   },
 
-  render3DBreakdown(custo_material, energia, capex_base, manutencao, mao_obra, custo_total, preco_150, preco_200, tempo, multiplicador) {
+  getCurrentParams() {
+    if (window.currentServiceMode === '3d') {
+      return {
+        peso: parseFloat(document.getElementById('calc-peso').value) || 0,
+        tempo: parseFloat(document.getElementById('calc-tempo').value) || 0,
+        material_id: document.getElementById('calc-material').value,
+        complexidade: parseInt(document.getElementById('calc-complexidade').value),
+        tipo: this.getSelectedType(),
+        precoRealInput: parseFloat(document.getElementById('calc-preco-real-input').value)
+      };
+    } else {
+      return {
+        horas: parseFloat(document.getElementById('proj-horas').value) || 0,
+        custo_direto: parseFloat(document.getElementById('proj-custo-direto').value) || 0,
+        complexidade: parseInt(document.getElementById('proj-complexidade').value)
+      };
+    }
+  },
+
+  // ----- RENDERIZAÇÃO DOS DETALHAMENTOS (recebem resultado) -----
+  render3DBreakdown(result) {
+    const { custo_material, energia, capex_base, manutencao, mao_obra, custo_total, preco_padrao, preco_premium, tempo, multiplicador } = result;
     document.getElementById('breakdown-container').innerHTML = `
       <div class="flex justify-between items-center text-slate-300"><span>Custo de Material:</span><span class="font-semibold text-white">${Utils.formatCurrency(custo_material)}</span></div>
       <div class="flex justify-between items-center text-slate-300"><span>Gasto com Energia:</span><span class="font-semibold text-white">${Utils.formatCurrency(energia)}</span></div>
@@ -113,14 +151,15 @@ const UI = {
       <div class="space-y-3 pt-2">
         <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Cenários de Faturamento</p>
         <div class="grid grid-cols-2 gap-3">
-          <div class="bg-indigo-900/50 p-3 rounded-xl border border-indigo-800"><span class="text-xs text-indigo-300 font-medium">Cenário 150% (Equilibrado)</span><p class="text-lg font-bold text-white mt-1">${Utils.formatCurrency(preco_150)}</p><p class="text-[10px] text-indigo-400">Lucro Real: ${Utils.formatCurrency(preco_150 - custo_total)}</p></div>
-          <div class="bg-indigo-900/50 p-3 rounded-xl border border-indigo-800"><span class="text-xs text-emerald-400 font-medium">Cenário 200% (Premium)</span><p class="text-lg font-bold text-white mt-1">${Utils.formatCurrency(preco_200)}</p><p class="text-[10px] text-emerald-400">Lucro Real: ${Utils.formatCurrency(preco_200 - custo_total)}</p></div>
+          <div class="bg-indigo-900/50 p-3 rounded-xl border border-indigo-800"><span class="text-xs text-indigo-300 font-medium">${configEngine.margem_padrao}% (Equilibrado)</span><p class="text-lg font-bold text-white mt-1">${Utils.formatCurrency(preco_padrao)}</p><p class="text-[10px] text-indigo-400">Lucro Real: ${Utils.formatCurrency(preco_padrao - custo_total)}</p></div>
+          <div class="bg-indigo-900/50 p-3 rounded-xl border border-indigo-800"><span class="text-xs text-emerald-400 font-medium">${configEngine.margem_premium}% (Premium)</span><p class="text-lg font-bold text-white mt-1">${Utils.formatCurrency(preco_premium)}</p><p class="text-[10px] text-emerald-400">Lucro Real: ${Utils.formatCurrency(preco_premium - custo_total)}</p></div>
         </div>
       </div>`;
     document.getElementById('panel-title-finance').innerText = "Custos de Manufatura 3D";
   },
 
-  renderProjectBreakdown(custo_direto, mao_obra, custo_total, preco_150, preco_200, horas) {
+  renderProjectBreakdown(result) {
+    const { custo_direto, mao_obra, custo_total, preco_padrao, preco_premium, horas } = result;
     document.getElementById('breakdown-container').innerHTML = `
       <div class="flex justify-between items-center text-slate-300"><span>Despesas Diretas:</span><span class="font-semibold text-white">${Utils.formatCurrency(custo_direto)}</span></div>
       <div class="flex justify-between items-center text-slate-300 border-b border-indigo-900/60 pb-3"><span>Mão de Obra (${horas}h):</span><span class="font-semibold text-emerald-400">${Utils.formatCurrency(mao_obra)}</span></div>
@@ -128,14 +167,14 @@ const UI = {
       <div class="space-y-3 pt-2">
         <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Cenários de Faturamento</p>
         <div class="grid grid-cols-2 gap-3">
-          <div class="bg-indigo-900/50 p-3 rounded-xl border border-indigo-800"><span class="text-xs text-indigo-300 font-medium">Margem Saudável (150%)</span><p class="text-lg font-bold text-white mt-1">${Utils.formatCurrency(preco_150)}</p><p class="text-[10px] text-indigo-400">Lucro: ${Utils.formatCurrency(preco_150 - custo_total)}</p></div>
-          <div class="bg-indigo-900/50 p-3 rounded-xl border border-indigo-800"><span class="text-xs text-emerald-400 font-medium">Alta Margem (200%)</span><p class="text-lg font-bold text-white mt-1">${Utils.formatCurrency(preco_200)}</p><p class="text-[10px] text-emerald-400">Lucro: ${Utils.formatCurrency(preco_200 - custo_total)}</p></div>
+          <div class="bg-indigo-900/50 p-3 rounded-xl border border-indigo-800"><span class="text-xs text-indigo-300 font-medium">${configEngine.margem_padrao}% (Equilibrado)</span><p class="text-lg font-bold text-white mt-1">${Utils.formatCurrency(preco_padrao)}</p><p class="text-[10px] text-indigo-400">Lucro: ${Utils.formatCurrency(preco_padrao - custo_total)}</p></div>
+          <div class="bg-indigo-900/50 p-3 rounded-xl border border-indigo-800"><span class="text-xs text-emerald-400 font-medium">${configEngine.margem_premium}% (Premium)</span><p class="text-lg font-bold text-white mt-1">${Utils.formatCurrency(preco_premium)}</p><p class="text-[10px] text-emerald-400">Lucro: ${Utils.formatCurrency(preco_premium - custo_total)}</p></div>
         </div>
       </div>`;
     document.getElementById('panel-title-finance').innerText = "Custos do Projeto Tecnológico";
   },
 
-  // ---------- MATERIAIS ----------
+  // ----- MATERIAIS (com edição) -----
   populateMaterialDropdowns() {
     const dropdown = document.getElementById('calc-material');
     dropdown.innerHTML = '';
@@ -148,22 +187,53 @@ const UI = {
     });
   },
 
-  toggleAddMaterialForm() {
-    document.getElementById('add-material-form').classList.toggle('hidden');
+  toggleAddMaterialForm(editData = null) {
+    const form = document.getElementById('add-material-form');
+    const title = document.getElementById('material-form-title');
+    if (editData) {
+      title.innerText = 'Editar Filamento';
+      document.getElementById('mat-edit-id').value = editData.id;
+      document.getElementById('mat-tipo').value = editData.tipo;
+      document.getElementById('mat-marca').value = editData.marca;
+      document.getElementById('mat-forma').value = editData.forma;
+      document.getElementById('mat-peso').value = editData.peso_total;
+      document.getElementById('mat-preco').value = editData.preco_total;
+      form.classList.remove('hidden');
+    } else {
+      title.innerText = 'Novo Filamento';
+      document.getElementById('mat-edit-id').value = '';
+      document.getElementById('mat-tipo').value = 'PLA';
+      document.getElementById('mat-marca').value = '';
+      document.getElementById('mat-forma').value = '';
+      document.getElementById('mat-peso').value = 1000;
+      document.getElementById('mat-preco').value = 120;
+      form.classList.toggle('hidden');
+    }
   },
 
-  addNewMaterial() {
+  saveMaterial() {
+    const id = document.getElementById('mat-edit-id').value;
     const tipo = document.getElementById('mat-tipo').value;
     const marca = document.getElementById('mat-marca').value.trim();
     const forma = document.getElementById('mat-forma').value.trim();
     const peso = parseFloat(document.getElementById('mat-peso').value);
     const preco = parseFloat(document.getElementById('mat-preco').value);
     if (!marca || !forma || isNaN(peso) || isNaN(preco)) return Utils.toast("Preencha todos os campos.");
-    materiais.push({ id: 'mat-' + Date.now(), tipo, marca, forma, peso_total: peso, preco_total: preco });
-    UI.populateMaterialDropdowns();
-    UI.renderMaterialsList();
-    UI.toggleAddMaterialForm();
-    Utils.toast("Material adicionado!");
+
+    if (id) {
+      // Edição
+      const index = materiais.findIndex(m => m.id === id);
+      if (index === -1) return Utils.toast("Material não encontrado.");
+      materiais[index] = { ...materiais[index], tipo, marca, forma, peso_total: peso, preco_total: preco };
+      Utils.toast("Material atualizado!");
+    } else {
+      // Adição
+      materiais.push({ id: 'mat-' + Date.now(), tipo, marca, forma, peso_total: peso, preco_total: preco });
+      Utils.toast("Material adicionado!");
+    }
+    this.populateMaterialDropdowns();
+    this.renderMaterialsList();
+    this.toggleAddMaterialForm();
     scheduleSync();
   },
 
@@ -173,8 +243,8 @@ const UI = {
       const dropdown = document.getElementById('calc-material');
       if (dropdown.value === id) dropdown.value = materiais.find(m => m.id !== id).id;
       materiais = materiais.filter(m => m.id !== id);
-      UI.populateMaterialDropdowns();
-      UI.renderMaterialsList();
+      this.populateMaterialDropdowns();
+      this.renderMaterialsList();
       scheduleSync();
       Utils.toast("Filamento removido.");
     });
@@ -225,25 +295,41 @@ const UI = {
       precoDiv.appendChild(labelSpan);
       precoDiv.appendChild(valorP);
       
+      // Botões de ação
+      const btnGroup = document.createElement('div');
+      btnGroup.className = "flex gap-1";
+      
+      const editBtn = document.createElement('button');
+      editBtn.className = "p-2 hover:bg-blue-50 dark:hover:bg-blue-950/30 text-slate-400 hover:text-blue-500 rounded-lg transition-colors";
+      editBtn.setAttribute('onclick', `UI.toggleAddMaterialForm(${JSON.stringify(mat).replace(/"/g, '&quot;')})`);
+      const editIcon = document.createElement('i');
+      editIcon.setAttribute('data-lucide', 'edit');
+      editIcon.className = "w-4 h-4";
+      editBtn.appendChild(editIcon);
+      
       const deleteBtn = document.createElement('button');
       deleteBtn.className = "p-2 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-slate-400 hover:text-rose-500 rounded-lg transition-colors";
       deleteBtn.setAttribute('onclick', `UI.deleteMaterial('${mat.id}')`);
-      const icon = document.createElement('i');
-      icon.setAttribute('data-lucide', 'trash-2');
-      icon.className = "w-4 h-4";
-      deleteBtn.appendChild(icon);
+      const delIcon = document.createElement('i');
+      delIcon.setAttribute('data-lucide', 'trash-2');
+      delIcon.className = "w-4 h-4";
+      deleteBtn.appendChild(delIcon);
+      
+      btnGroup.appendChild(editBtn);
+      btnGroup.appendChild(deleteBtn);
       
       rightDiv.appendChild(precoDiv);
-      rightDiv.appendChild(deleteBtn);
+      rightDiv.appendChild(btnGroup);
       
       card.appendChild(leftDiv);
       card.appendChild(rightDiv);
       container.appendChild(card);
     });
-    lucide.createIcons();
+    // Otimização: atualizar ícones apenas dentro do container
+    lucide.createIcons({ root: container });
   },
 
-  // ---------- CONFIGURAÇÕES ----------
+  // ----- CONFIGURAÇÕES (incluindo novos campos) -----
   fillConfigForm() {
     document.getElementById('cfg-energia').value = configEngine.energia_hora;
     document.getElementById('cfg-capex').value = configEngine.capex_base;
@@ -253,6 +339,9 @@ const UI = {
     document.getElementById('cfg-preco-minimo').value = configEngine.preco_minimo || 0;
     document.getElementById('cfg-proj-hora-base').value = configEngine.proj_hora_base;
     document.getElementById('cfg-proj-mult-n3').value = configEngine.proj_multiplicador_n3;
+    document.getElementById('cfg-margem-padrao').value = configEngine.margem_padrao || 150;
+    document.getElementById('cfg-margem-premium').value = configEngine.margem_premium || 200;
+    document.getElementById('cfg-autor-nome').value = configEngine.autor_nome || '';
     document.getElementById('proj-lbl-hora-base').innerText = `R$ ${configEngine.proj_hora_base.toFixed(2)}/h`;
   },
 
@@ -265,6 +354,9 @@ const UI = {
     configEngine.preco_minimo = parseFloat(document.getElementById('cfg-preco-minimo').value) || 0;
     configEngine.proj_hora_base = parseFloat(document.getElementById('cfg-proj-hora-base').value) || 0;
     configEngine.proj_multiplicador_n3 = parseFloat(document.getElementById('cfg-proj-mult-n3').value) || 0;
+    configEngine.margem_padrao = parseFloat(document.getElementById('cfg-margem-padrao').value) || 150;
+    configEngine.margem_premium = parseFloat(document.getElementById('cfg-margem-premium').value) || 200;
+    configEngine.autor_nome = document.getElementById('cfg-autor-nome').value.trim() || 'Felipe Sant\'Oliver';
     document.getElementById('proj-lbl-hora-base').innerText = `R$ ${configEngine.proj_hora_base.toFixed(2)}/h`;
     
     Storage.setLocal(materiais, historico, configEngine, localStorage.getItem('app_password'));
@@ -286,7 +378,7 @@ const UI = {
     scheduleSync();
   },
 
-  // ---------- MARKDOWN / TEMPLATES ----------
+  // ----- MARKDOWN / TEMPLATES (usando autor configurável) -----
   generateMarkdown() {
     if (window.currentCalculatedResults?.service_type !== '3d') return Utils.toast("Selecione Manufatura 3D.");
     const pecaNome = document.getElementById('calc-peca-nome').value.trim() || "Peça Exemplo";
@@ -300,42 +392,42 @@ const UI = {
     const materialObj = materiais.find(m => m.id === c.material_id);
     const materialStr = materialObj ? `${materialObj.tipo} (${materialObj.marca})` : "Material não encontrado";
     const capex_manut = c.capex_base + c.manutencao;
-    const lucro_real_150 = c.preco_150 - c.custo_total;
-    const margem_150 = (lucro_real_150 / c.preco_150) * 100;
-    const lucro_real_200 = c.preco_200 - c.custo_total;
-    const margem_200 = (lucro_real_200 / c.preco_200) * 100;
+    const lucro_real_padrao = c.preco_padrao - c.custo_total;
+    const margem_padrao = (lucro_real_padrao / c.preco_padrao) * 100;
+    const lucro_real_premium = c.preco_premium - c.custo_total;
+    const margem_premium = (lucro_real_premium / c.preco_premium) * 100;
     const multVal = c.complexidade === 2 ? "1.5" : c.complexidade === 3 ? configEngine.multiplicador_n3.toFixed(1) : "1.0";
 
-    return `**Precificação — ${pecaNome}**\n\nCliente: ${clienteNome}\nMaterial: ${materialStr}\nPeso: ${c.peso}g\nTempo: ${c.tempo}h\nComplexidade: Nível ${c.complexidade}\n\n---\n\n### Tabela de custos\n| Descrição | Valor |\n| :--- | :--- |\n| Custo de material | ${Utils.formatCurrency(c.custo_material)} |\n| CAPEX (perda + manutenção) | ${Utils.formatCurrency(capex_manut)} |\n| Gasto com energia | ${Utils.formatCurrency(c.energia)} |\n| **Custo total de impressão** | **${Utils.formatCurrency(c.custo_total)}** |\n\n### Tabela de mão de obra\n| Descrição | Valor |\n| :--- | :--- |\n| Tempo | ${c.tempo}h |\n| Valor base/h | R$ ${configEngine.mao_obra_hora.toFixed(2)} |\n| Multiplicador | ${multVal} |\n| **Mão de obra total** | **${Utils.formatCurrency(c.mao_obra)}** |\n\n### Tabela de cenários de venda\n| Cenário | Preço final | Lucro total | Margem líquida |\n| :--- | :--- | :--- | :--- |\n| 150% | ${Utils.formatCurrency(c.preco_150)} | ${Utils.formatCurrency(lucro_real_150)} | ${margem_150.toFixed(2).replace('.', ',')}% |\n| 200% | ${Utils.formatCurrency(c.preco_200)} | ${Utils.formatCurrency(lucro_real_200)} | ${margem_200.toFixed(2).replace('.', ',')}% |`;
+    return `**Precificação — ${pecaNome}**\n\nCliente: ${clienteNome}\nMaterial: ${materialStr}\nPeso: ${c.peso}g\nTempo: ${c.tempo}h\nComplexidade: Nível ${c.complexidade}\n\n---\n\n### Tabela de custos\n| Descrição | Valor |\n| :--- | :--- |\n| Custo de material | ${Utils.formatCurrency(c.custo_material)} |\n| CAPEX (perda + manutenção) | ${Utils.formatCurrency(capex_manut)} |\n| Gasto com energia | ${Utils.formatCurrency(c.energia)} |\n| **Custo total de impressão** | **${Utils.formatCurrency(c.custo_total)}** |\n\n### Tabela de mão de obra\n| Descrição | Valor |\n| :--- | :--- |\n| Tempo | ${c.tempo}h |\n| Valor base/h | R$ ${configEngine.mao_obra_hora.toFixed(2)} |\n| Multiplicador | ${multVal} |\n| **Mão de obra total** | **${Utils.formatCurrency(c.mao_obra)}** |\n\n### Tabela de cenários de venda\n| Cenário | Preço final | Lucro total | Margem líquida |\n| :--- | :--- | :--- | :--- |\n| ${configEngine.margem_padrao}% | ${Utils.formatCurrency(c.preco_padrao)} | ${Utils.formatCurrency(lucro_real_padrao)} | ${margem_padrao.toFixed(2).replace('.', ',')}% |\n| ${configEngine.margem_premium}% | ${Utils.formatCurrency(c.preco_premium)} | ${Utils.formatCurrency(lucro_real_premium)} | ${margem_premium.toFixed(2).replace('.', ',')}% |`;
   },
 
   openTemplateModal() { document.getElementById('template-modal').classList.remove('hidden'); },
   closeTemplateModal() { document.getElementById('template-modal').classList.add('hidden'); },
   copyTemplate(tipo) {
-    const preco = window.currentCalculatedResults?.preco_150 || 0;
+    const preco = window.currentCalculatedResults?.preco_padrao || 0;
     const nome = document.getElementById('calc-peca-nome').value || 'Peça';
     Templates.copyTemplate(tipo, preco, nome);
     this.closeTemplateModal();
   },
 
-  // ---------- SALVAR E EDITAR ----------
+  // ----- SALVAR E EDITAR -----
   openSaveModal() {
     document.getElementById('modal-nome').value = document.getElementById('calc-peca-nome').value;
     document.getElementById('modal-cliente').value = document.getElementById('calc-cliente-nome').value;
     document.getElementById('modal-preco-real').value = document.getElementById('calc-preco-real-input').value;
     document.getElementById('modal-preview-custo').innerText = Utils.formatCurrency(window.currentCalculatedResults.custo_total);
-    document.getElementById('modal-preview-venda').innerText = Utils.formatCurrency(window.currentCalculatedResults.preco_150);
+    document.getElementById('modal-preview-venda').innerText = Utils.formatCurrency(window.currentCalculatedResults.preco_padrao);
     document.getElementById('save-modal').classList.remove('hidden');
   },
   closeSaveModal() { document.getElementById('save-modal').classList.add('hidden'); },
-  copyPresetPrice() { document.getElementById('modal-preco-real').value = window.currentCalculatedResults.preco_150; },
+  copyPresetPrice() { document.getElementById('modal-preco-real').value = window.currentCalculatedResults.preco_padrao; },
 
   savePieceRecord() {
     const nome = document.getElementById('modal-nome').value.trim();
     const cliente = document.getElementById('modal-cliente').value.trim();
     let preco_real = parseFloat(document.getElementById('modal-preco-real').value);
     if (!nome || !cliente) return Utils.toast("Preencha nome e cliente.");
-    if (isNaN(preco_real)) preco_real = window.currentCalculatedResults.preco_150;
+    if (isNaN(preco_real)) preco_real = window.currentCalculatedResults.preco_padrao;
     if (window.currentCalculatedResults.service_type === '3d' && window.currentCalculatedResults.tipo !== 'normal') preco_real = 0;
     const lucro_real = preco_real - window.currentCalculatedResults.custo_total;
     const margem = preco_real > 0 ? (lucro_real / preco_real) * 100 : 0;
@@ -356,8 +448,8 @@ const UI = {
       manutencao: window.currentCalculatedResults.manutencao,
       custo_total: window.currentCalculatedResults.custo_total,
       mao_obra: window.currentCalculatedResults.mao_obra,
-      preco_150: window.currentCalculatedResults.preco_150,
-      preco_200: window.currentCalculatedResults.preco_200,
+      preco_padrao: window.currentCalculatedResults.preco_padrao,
+      preco_premium: window.currentCalculatedResults.preco_premium,
       preco_vendido: preco_real,
       lucro_real, margem
     });
@@ -385,7 +477,7 @@ const UI = {
     if (!record) return;
     record.nome = document.getElementById('edit-nome').value.trim();
     record.cliente = document.getElementById('edit-cliente').value.trim();
-    record.preco_vendido = parseFloat(document.getElementById('edit-preco-real').value) || record.preco_150;
+    record.preco_vendido = parseFloat(document.getElementById('edit-preco-real').value) || record.preco_padrao;
     record.lucro_real = record.preco_vendido - record.custo_total;
     record.margem = record.preco_vendido > 0 ? (record.lucro_real / record.preco_vendido) * 100 : 0;
     this.closeEditModal();
@@ -404,8 +496,10 @@ const UI = {
     });
   },
 
-  // ---------- HISTÓRICO ----------
-  applyHistoryFilters() { this.renderHistoryTable(); },
+  // ----- HISTÓRICO (com filtros mês/ano) -----
+  applyHistoryFilters() {
+    this.renderHistoryTable();
+  },
 
   sortHistory(column) {
     if (this.sortColumn === column) this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
@@ -420,12 +514,21 @@ const UI = {
     const searchQuery = document.getElementById('hist-search-client').value.toLowerCase();
     const filterPeriod = document.getElementById('hist-filter-period').value;
     const filterType = document.getElementById('hist-filter-type').value;
+    const filterMonth = document.getElementById('hist-filter-month').value;
+    const filterYear = document.getElementById('hist-filter-year').value;
 
     let filtered = historico.filter(item => {
       const matchesSearch = item.nome.toLowerCase().includes(searchQuery) || item.cliente.toLowerCase().includes(searchQuery);
       let matchesPeriod = true;
-      if (filterPeriod === '7d') matchesPeriod = (Date.now() - new Date(item.data).getTime()) / 86400000 <= 7;
-      else if (filterPeriod === '30d') matchesPeriod = (Date.now() - new Date(item.data).getTime()) / 86400000 <= 30;
+      const itemDate = new Date(item.data);
+      if (filterPeriod === '7d') matchesPeriod = (Date.now() - itemDate.getTime()) / 86400000 <= 7;
+      else if (filterPeriod === '30d') matchesPeriod = (Date.now() - itemDate.getTime()) / 86400000 <= 30;
+      else if (filterPeriod === 'mes' && filterMonth) {
+        const [ano, mes] = filterMonth.split('-').map(Number);
+        matchesPeriod = itemDate.getFullYear() === ano && itemDate.getMonth() === mes - 1;
+      } else if (filterPeriod === 'ano' && filterYear) {
+        matchesPeriod = itemDate.getFullYear() === parseInt(filterYear);
+      }
       let matchesType = filterType === 'todos' || item.service_type === filterType;
       return matchesSearch && matchesPeriod && matchesType;
     });
@@ -549,10 +652,11 @@ const UI = {
       tr.appendChild(td7);
       tbody.appendChild(tr);
     });
-    lucide.createIcons();
+    // Otimização: atualizar ícones apenas na tabela
+    lucide.createIcons({ root: tbody });
   },
 
-  // ---------- QUICK MODE & VALIDAÇÃO ----------
+  // ----- QUICK MODE & VALIDAÇÃO -----
   toggleQuickMode() {
     document.getElementById('tab-precificar').classList.toggle('quick-mode');
   },
@@ -562,7 +666,7 @@ const UI = {
     else el.classList.remove('validation-error');
   },
 
-  // ---------- IMPORTAR BACKUP ----------
+  // ----- IMPORTAR BACKUP -----
   async importBackupFile(event) {
     const file = event.target.files[0];
     if (!file) return;

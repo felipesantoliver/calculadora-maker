@@ -10,7 +10,10 @@ let configEngine = {
   multiplicador_n3: 2.2,
   preco_minimo: 10.00,
   proj_hora_base: 50.00,
-  proj_multiplicador_n3: 2.0
+  proj_multiplicador_n3: 2.0,
+  margem_padrao: 150,
+  margem_premium: 200,
+  autor_nome: 'Felipe Sant\'Oliver'
 };
 let currentServiceMode = '3d';
 let syncTimeout;
@@ -33,6 +36,9 @@ async function init() {
     Object.assign(configEngine, local.configEngine);
   }
 
+  // Mostrar loader
+  UI.showLoader();
+
   try {
     const cloud = await API.loadData();
     if (cloud) {
@@ -52,6 +58,8 @@ async function init() {
     } else {
       Utils.toast('Erro ao carregar dados: ' + err.message);
     }
+  } finally {
+    UI.hideLoader();
   }
 
   window.materiais = materiais;
@@ -70,11 +78,14 @@ async function init() {
 function scheduleSync() {
   clearTimeout(syncTimeout);
   syncTimeout = setTimeout(async () => {
+    UI.showLoader();
     try {
       await API.saveData(materiais, historico);
       Storage.setLocal(materiais, historico, configEngine, localStorage.getItem('app_password'));
     } catch (err) {
       Utils.toast('Erro ao sincronizar: ' + err.message);
+    } finally {
+      UI.hideLoader();
     }
   }, 2000);
 }
@@ -86,6 +97,9 @@ window.configEngine = configEngine;
 window.UI = UI;
 window.Utils = Utils;
 window.API = API;
+window.Engine = Engine;
+window.Charts = Charts;
+window.Templates = Templates;
 
 // Eventos
 document.getElementById('confirm-cancel-btn').onclick = () => document.getElementById('confirm-modal').classList.add('hidden');

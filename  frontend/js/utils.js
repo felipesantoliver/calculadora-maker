@@ -1,35 +1,61 @@
-const Utils = {
-  toast(message) {
-    const toast = document.getElementById('toast');
-    document.getElementById('toast-message').innerText = message;
-    toast.classList.remove('hidden');
-    setTimeout(() => toast.classList.add('hidden'), 3000);
+const Storage = {
+  getLocal() {
+    const mat = localStorage.getItem('materiais');
+    const hist = localStorage.getItem('historico');
+    const cfg = localStorage.getItem('configEngine');
+    const pwd = localStorage.getItem('app_password');
+    return {
+      materiais: mat ? JSON.parse(mat) : null,
+      historico: hist ? JSON.parse(hist) : null,
+      configEngine: cfg ? JSON.parse(cfg) : null,
+      password: pwd || '12345678'
+    };
   },
 
-  showConfirm(title, message, onConfirm) {
-    document.getElementById('confirm-title').innerText = title;
-    document.getElementById('confirm-message').innerText = message;
-    window._confirmCallback = onConfirm;
-    document.getElementById('confirm-modal').classList.remove('hidden');
+  setLocal(materiais, historico, configEngine, password) {
+    localStorage.setItem('materiais', JSON.stringify(materiais));
+    localStorage.setItem('historico', JSON.stringify(historico));
+    localStorage.setItem('configEngine', JSON.stringify(configEngine));
+    if (password) localStorage.setItem('app_password', password);
   },
 
-  ceilToHalfReal(val) {
-    return Math.ceil(val / 0.5) * 0.5;
+  exportBackup() {
+    const backup = { 
+      materiais, 
+      historico, 
+      configEngine,
+      password: localStorage.getItem('app_password'),
+      exportadoEm: new Date().toISOString() 
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'precificador_backup.json';
+    a.click();
+    URL.revokeObjectURL(url);
   },
 
-  formatCurrency(val) {
-    return 'R$ ' + val.toFixed(2).replace('.', ',');
-  },
-
-  validateField(el) {
-    if (!el.checkValidity()) {
-      el.classList.add('ring-2', 'ring-rose-500', 'border-rose-500');
+  async importBackup(file) {
+    const text = await file.text();
+    const backup = JSON.parse(text);
+    if (backup.materiais && backup.historico) {
+      materiais = backup.materiais;
+      historico = backup.historico;
+      if (backup.configEngine) {
+        Object.assign(configEngine, backup.configEngine);
+        window.configEngine = configEngine;
+      }
+      if (backup.password) {
+        localStorage.setItem('app_password', backup.password);
+        API.setPassword(backup.password);
+      }
+      Storage.setLocal(materiais, historico, configEngine, backup.password || localStorage.getItem('app_password'));
+      Utils.toast('Backup restaurado com sucesso!');
+      return true;
     } else {
-      el.classList.remove('ring-2', 'ring-rose-500', 'border-rose-500');
+      Utils.toast('Arquivo de backup inválido!');
+      return false;
     }
-  },
-
-  generateId() {
-    return 'hist-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
   }
 };

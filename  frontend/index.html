@@ -29,6 +29,14 @@
 </head>
 <body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 flex flex-col md:flex-row min-h-screen transition-colors duration-300">
 
+    <!-- LOADER GLOBAL -->
+    <div id="app-loader" class="hidden fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[100] flex items-center justify-center">
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-2xl flex items-center gap-4">
+            <div class="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">Carregando dados...</span>
+        </div>
+    </div>
+
     <!-- ==============================================
          SIDEBAR (Menu Lateral)
          ============================================== -->
@@ -166,7 +174,7 @@
                     </div>
                 </div>
 
-                <!-- Filtros Gerais do Dashboard -->
+                <!-- Filtros Gerais do Dashboard (incluindo mês/ano) -->
                 <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-wrap gap-4 items-center justify-between">
                     <h4 class="font-semibold text-sm text-slate-700 dark:text-slate-300">Filtros Operacionais</h4>
                     <div class="flex flex-wrap gap-3 items-center w-full sm:w-auto">
@@ -174,7 +182,11 @@
                             <option value="todos">Todos os Períodos</option>
                             <option value="7d">Últimos 7 dias</option>
                             <option value="30d">Últimos 30 dias</option>
+                            <option value="mes">Mês específico</option>
+                            <option value="ano">Ano específico</option>
                         </select>
+                        <input type="month" id="dash-filter-month" onchange="Charts.updateDashboard()" class="hidden bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <input type="number" id="dash-filter-year" placeholder="Ano" onchange="Charts.updateDashboard()" class="hidden bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none w-24">
                         <select id="dash-filter-type" onchange="Charts.updateDashboard()" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 w-full sm:w-auto outline-none">
                             <option value="todos">Todos os Serviços</option>
                             <option value="3d">Apenas Impressão 3D</option>
@@ -186,14 +198,14 @@
                 <!-- Seção de Gráficos -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <!-- Gráfico 1: Finanças -->
-                    <div class="bg-white p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                    <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
                         <h4 class="font-bold text-slate-800 dark:text-slate-200 mb-4">Receita vs Lucro Real</h4>
                         <div class="relative h-64 w-full">
                             <canvas id="financeChart"></canvas>
                         </div>
                     </div>
                     <!-- Gráfico 2: Divisão por tipo de serviço ou perdas -->
-                    <div class="bg-white p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                    <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
                         <h4 class="font-bold text-slate-800 dark:text-slate-200 mb-4">Distribuição de Receita por Categoria</h4>
                         <div class="relative h-64 w-full flex justify-center">
                             <canvas id="typeChart"></canvas>
@@ -418,7 +430,7 @@
                  3. TELA: HISTÓRICO
                  ============================================== -->
             <div id="tab-historico" class="tab-content hidden space-y-6">
-                <!-- Filtros e Busca de Registros -->
+                <!-- Filtros e Busca de Registros (incluindo mês/ano) -->
                 <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div class="flex-1 min-w-0">
                         <h3 class="font-bold text-lg text-slate-800 dark:text-white">Histórico Geral de Cobranças</h3>
@@ -433,7 +445,11 @@
                             <option value="todos">Todos os Períodos</option>
                             <option value="7d">Últimos 7 dias</option>
                             <option value="30d">Últimos 30 dias</option>
+                            <option value="mes">Mês específico</option>
+                            <option value="ano">Ano específico</option>
                         </select>
+                        <input type="month" id="hist-filter-month" onchange="UI.applyHistoryFilters()" class="hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-850 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <input type="number" id="hist-filter-year" placeholder="Ano" onchange="UI.applyHistoryFilters()" class="hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-850 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none w-24">
                         <select id="hist-filter-type" onchange="UI.applyHistoryFilters()" class="border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-850 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 w-full sm:w-auto outline-none">
                             <option value="todos">Todos os Serviços</option>
                             <option value="3d">Apenas Impressão 3D</option>
@@ -521,6 +537,22 @@
                                     <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Preço Mínimo (R$)</label>
                                     <input type="number" id="cfg-preco-minimo" step="0.5" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2.5 text-sm font-semibold text-slate-900 dark:text-slate-100 outline-none">
                                 </div>
+
+                                <!-- NOVOS CAMPOS: Margens configuráveis -->
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Margem Padrão (%)</label>
+                                    <input type="number" id="cfg-margem-padrao" step="1" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2.5 text-sm font-semibold text-slate-900 dark:text-slate-100 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Margem Premium (%)</label>
+                                    <input type="number" id="cfg-margem-premium" step="1" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2.5 text-sm font-semibold text-slate-900 dark:text-slate-100 outline-none">
+                                </div>
+
+                                <!-- NOVO CAMPO: Nome do Autor -->
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Nome do Autor (para assinatura de e-mails)</label>
+                                    <input type="text" id="cfg-autor-nome" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2.5 text-sm font-semibold text-slate-900 dark:text-slate-100 outline-none">
+                                </div>
                             </div>
                         </div>
 
@@ -584,9 +616,10 @@
                                 </button>
                             </div>
 
-                            <!-- Formulário Oculto de Cadastro de Filamento -->
+                            <!-- Formulário de Cadastro/Edição de Filamento -->
                             <div id="add-material-form" class="hidden bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-4 animate-fadeIn">
-                                <h4 class="font-bold text-xs text-slate-700 dark:text-slate-300 uppercase tracking-wider">Novo Filamento</h4>
+                                <h4 class="font-bold text-xs text-slate-700 dark:text-slate-300 uppercase tracking-wider" id="material-form-title">Novo Filamento</h4>
+                                <input type="hidden" id="mat-edit-id">
                                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                     <div>
                                         <label class="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">Tipo de Material</label>
@@ -621,7 +654,7 @@
 
                                 <div class="flex justify-end gap-2">
                                     <button onclick="UI.toggleAddMaterialForm()" class="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold transition-all">Cancelar</button>
-                                    <button onclick="UI.addNewMaterial()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all">Adicionar</button>
+                                    <button onclick="UI.saveMaterial()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all">Salvar</button>
                                 </div>
                             </div>
 
@@ -694,9 +727,9 @@
                 <div>
                     <div class="flex justify-between items-center mb-1">
                         <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300">Valor Cobrado Praticado (R$)</label>
-                        <span class="text-[10px] text-indigo-500 dark:text-indigo-400 font-semibold cursor-pointer hover:underline" onclick="UI.copyPresetPrice()">Copiar Margem 150%</span>
+                        <span class="text-[10px] text-indigo-500 dark:text-indigo-400 font-semibold cursor-pointer hover:underline" onclick="UI.copyPresetPrice()">Copiar Margem Padrão</span>
                     </div>
-                    <input type="number" id="modal-preco-real" step="0.5" placeholder="Caso em branco, adota margem de 150%" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2.5 text-sm font-semibold focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-slate-100 outline-none">
+                    <input type="number" id="modal-preco-real" step="0.5" placeholder="Caso em branco, adota margem padrão" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2.5 text-sm font-semibold focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-slate-100 outline-none">
                 </div>
             </div>
 
@@ -707,7 +740,7 @@
                     <p class="text-lg font-bold text-indigo-950 dark:text-indigo-200" id="modal-preview-custo">R$ 0,00</p>
                 </div>
                 <div class="text-right">
-                    <span class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wide">Preço (150%)</span>
+                    <span class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wide">Preço (Padrão)</span>
                     <p class="text-lg font-bold text-slate-900 dark:text-slate-100" id="modal-preview-venda">R$ 0,00</p>
                 </div>
             </div>

@@ -12,3 +12,11 @@ body { font-family: 'Inter', sans-serif; }
 .quick-mode .cliente-field,
 .quick-mode .preco-real-field { display: none; }
 .validation-error { @apply ring-2 ring-rose-500 border-rose-500; }
+
+/* Loader (opcional, pois usamos classes Tailwind) */
+#app-loader .animate-spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

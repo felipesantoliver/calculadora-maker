@@ -4,15 +4,23 @@ const Charts = {
   updateDashboard() {
     const filterPeriod = document.getElementById('dash-filter-period').value;
     const filterType = document.getElementById('dash-filter-type').value;
+    const filterMonth = document.getElementById('dash-filter-month').value;
+    const filterYear = document.getElementById('dash-filter-year').value;
 
     const filtered = historico.filter(item => {
       let matchesPeriod = true;
+      const itemDate = new Date(item.data);
       if (filterPeriod === '7d') {
-        const diffDays = (Date.now() - new Date(item.data).getTime()) / 86400000;
+        const diffDays = (Date.now() - itemDate.getTime()) / 86400000;
         matchesPeriod = diffDays <= 7;
       } else if (filterPeriod === '30d') {
-        const diffDays = (Date.now() - new Date(item.data).getTime()) / 86400000;
+        const diffDays = (Date.now() - itemDate.getTime()) / 86400000;
         matchesPeriod = diffDays <= 30;
+      } else if (filterPeriod === 'mes' && filterMonth) {
+        const [ano, mes] = filterMonth.split('-').map(Number);
+        matchesPeriod = itemDate.getFullYear() === ano && itemDate.getMonth() === mes - 1;
+      } else if (filterPeriod === 'ano' && filterYear) {
+        matchesPeriod = itemDate.getFullYear() === parseInt(filterYear);
       }
       let matchesType = filterType === 'todos' || item.service_type === filterType;
       return matchesPeriod && matchesType;
@@ -38,15 +46,7 @@ const Charts = {
     document.getElementById('kpi-margem-media').innerText = margemMedia.toFixed(1) + '%';
     document.getElementById('kpi-pecas-perdidas').innerText = taxaErro.toFixed(1) + '%';
 
-    if (financeChart) financeChart.destroy();
-    if (typeChart) typeChart.destroy();
-    if (marginChart) marginChart.destroy();
-
-    const isDark = document.documentElement.classList.contains('dark');
-    const gridColor = isDark ? '#334155' : '#f1f5f9';
-    const labelColor = isDark ? '#94a3b8' : '#475569';
-
-    // Dados para gráfico financeiro (receita x lucro)
+    // Preparar dados
     const datasMap = {};
     const margensPorData = {};
     filtered.forEach(item => {
@@ -73,27 +73,40 @@ const Charts = {
       return m && m.count > 0 ? m.total / m.count : null;
     });
 
-    const ctx = document.getElementById('financeChart').getContext('2d');
-    financeChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: sortedDates.map(d => d.split('-').reverse().slice(0,2).join('/')),
-        datasets: [
-          { label: 'Faturamento (R$)', data: receitas, borderColor: '#4f46e5', tension: 0.3, fill: true, backgroundColor: 'rgba(79,70,229,0.1)' },
-          { label: 'Lucro (R$)', data: lucros, borderColor: '#10b981', tension: 0.3, fill: true, backgroundColor: 'rgba(16,185,129,0.1)' },
-          { label: 'Margem Média (%)', data: margensMedias, borderColor: '#f59e0b', borderDash: [5,5], tension: 0.3, fill: false, yAxisID: 'y1' }
-        ]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        scales: {
-          y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: labelColor } },
-          y1: { position: 'right', beginAtZero: true, max: 100, grid: { display: false }, ticks: { color: '#f59e0b', callback: v => v + '%' } },
-          x: { grid: { display: false }, ticks: { color: labelColor } }
+    const isDark = document.documentElement.classList.contains('dark');
+    const gridColor = isDark ? '#334155' : '#f1f5f9';
+    const labelColor = isDark ? '#94a3b8' : '#475569';
+
+    // Atualizar gráfico financeiro
+    if (financeChart) {
+      financeChart.data.labels = sortedDates.map(d => d.split('-').reverse().slice(0,2).join('/'));
+      financeChart.data.datasets[0].data = receitas;
+      financeChart.data.datasets[1].data = lucros;
+      financeChart.data.datasets[2].data = margensMedias;
+      financeChart.update();
+    } else {
+      const ctx = document.getElementById('financeChart').getContext('2d');
+      financeChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: sortedDates.map(d => d.split('-').reverse().slice(0,2).join('/')),
+          datasets: [
+            { label: 'Faturamento (R$)', data: receitas, borderColor: '#4f46e5', tension: 0.3, fill: true, backgroundColor: 'rgba(79,70,229,0.1)' },
+            { label: 'Lucro (R$)', data: lucros, borderColor: '#10b981', tension: 0.3, fill: true, backgroundColor: 'rgba(16,185,129,0.1)' },
+            { label: 'Margem Média (%)', data: margensMedias, borderColor: '#f59e0b', borderDash: [5,5], tension: 0.3, fill: false, yAxisID: 'y1' }
+          ]
         },
-        plugins: { legend: { labels: { color: labelColor } } }
-      }
-    });
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: labelColor } },
+            y1: { position: 'right', beginAtZero: true, max: 100, grid: { display: false }, ticks: { color: '#f59e0b', callback: v => v + '%' } },
+            x: { grid: { display: false }, ticks: { color: labelColor } }
+          },
+          plugins: { legend: { labels: { color: labelColor } } }
+        }
+      });
+    }
 
     // Gráfico de pizza (categoria)
     let fat3d = 0, fatProj = 0;
@@ -101,14 +114,19 @@ const Charts = {
       if (item.service_type === '3d') fat3d += item.preco_vendido;
       else fatProj += item.preco_vendido;
     });
-    const ctx2 = document.getElementById('typeChart').getContext('2d');
-    typeChart = new Chart(ctx2, {
-      type: 'doughnut',
-      data: {
-        labels: ['Impressão 3D', 'Projetos'],
-        datasets: [{ data: [fat3d, fatProj], backgroundColor: ['#6366f1', '#10b981'] }]
-      },
-      options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: labelColor } } }, cutout: '65%' }
-    });
+    if (typeChart) {
+      typeChart.data.datasets[0].data = [fat3d, fatProj];
+      typeChart.update();
+    } else {
+      const ctx2 = document.getElementById('typeChart').getContext('2d');
+      typeChart = new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+          labels: ['Impressão 3D', 'Projetos'],
+          datasets: [{ data: [fat3d, fatProj], backgroundColor: ['#6366f1', '#10b981'] }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: labelColor } } }, cutout: '65%' }
+      });
+    }
   }
 };
