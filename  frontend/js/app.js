@@ -19,6 +19,14 @@ async function init() {
   // Inicializar tema
   if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
 
+  // Carregar senha
+  let password = localStorage.getItem('app_password');
+  if (!password) {
+    password = '12345678';
+    localStorage.setItem('app_password', password);
+  }
+  API.setPassword(password);
+
   // Carregar configurações da engine do localStorage (se houver)
   const local = Storage.getLocal();
   if (local.configEngine) {
@@ -28,24 +36,24 @@ async function init() {
   try {
     const cloud = await API.loadData();
     if (cloud) {
-      // Atualiza os arrays in-place para manter a referência
       materiais.splice(0, materiais.length, ...cloud.materiais);
       historico.splice(0, historico.length, ...cloud.historico);
-      Storage.setLocal(materiais, historico, configEngine);
+      Storage.setLocal(materiais, historico, configEngine, password);
     } else if (local.materiais && local.historico) {
       materiais.splice(0, materiais.length, ...local.materiais);
       historico.splice(0, historico.length, ...local.historico);
       Utils.toast('Modo offline – usando cache local');
     }
-  } catch {
+  } catch (err) {
     if (local.materiais && local.historico) {
       materiais.splice(0, materiais.length, ...local.materiais);
       historico.splice(0, historico.length, ...local.historico);
       Utils.toast('Sem conexão – usando dados locais');
+    } else {
+      Utils.toast('Erro ao carregar dados: ' + err.message);
     }
   }
 
-  // Atribui ao window após os dados estarem carregados
   window.materiais = materiais;
   window.historico = historico;
   window.configEngine = configEngine;
@@ -64,17 +72,20 @@ function scheduleSync() {
   syncTimeout = setTimeout(async () => {
     try {
       await API.saveData(materiais, historico);
-      Storage.setLocal(materiais, historico, configEngine);
-    } catch { /* offline */ }
+      Storage.setLocal(materiais, historico, configEngine, localStorage.getItem('app_password'));
+    } catch (err) {
+      Utils.toast('Erro ao sincronizar: ' + err.message);
+    }
   }, 2000);
 }
 
-// Expor funções globais necessárias
+// Expor funções globais
 window.materiais = materiais;
 window.historico = historico;
 window.configEngine = configEngine;
 window.UI = UI;
 window.Utils = Utils;
+window.API = API;
 
 // Eventos
 document.getElementById('confirm-cancel-btn').onclick = () => document.getElementById('confirm-modal').classList.add('hidden');

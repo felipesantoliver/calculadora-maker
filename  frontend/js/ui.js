@@ -187,10 +187,57 @@ const UI = {
       const custo_por_grama = mat.preco_total / mat.peso_total;
       const card = document.createElement('div');
       card.className = "p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center justify-between gap-4";
-      card.innerHTML = `
-        <div class="flex-1"><div class="flex items-center gap-2"><span class="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-extrabold text-[10px] rounded">${mat.tipo}</span><h4 class="font-bold text-sm text-slate-800 dark:text-slate-100">${mat.marca}</h4></div><p class="text-xs text-slate-400 mt-1">${mat.forma} de ${mat.peso_total}g • ${Utils.formatCurrency(mat.preco_total)}</p></div>
-        <div class="flex items-center gap-4"><div class="text-right"><span class="text-[10px] font-bold text-slate-500 uppercase block">Por Grama</span><p class="font-extrabold text-sm text-indigo-900 dark:text-indigo-300">R$ ${custo_por_grama.toFixed(3)}</p></div>
-        <button onclick="UI.deleteMaterial('${mat.id}')" class="p-2 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-slate-400 hover:text-rose-500 rounded-lg transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>`;
+      
+      const leftDiv = document.createElement('div');
+      leftDiv.className = "flex-1";
+      const flexDiv = document.createElement('div');
+      flexDiv.className = "flex items-center gap-2";
+      
+      const tipoSpan = document.createElement('span');
+      tipoSpan.className = "px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-extrabold text-[10px] rounded";
+      tipoSpan.textContent = mat.tipo;
+      
+      const nomeH4 = document.createElement('h4');
+      nomeH4.className = "font-bold text-sm text-slate-800 dark:text-slate-100";
+      nomeH4.textContent = mat.marca;
+      
+      flexDiv.appendChild(tipoSpan);
+      flexDiv.appendChild(nomeH4);
+      
+      const infoP = document.createElement('p');
+      infoP.className = "text-xs text-slate-400 mt-1";
+      infoP.textContent = `${mat.forma} de ${mat.peso_total}g • ${Utils.formatCurrency(mat.preco_total)}`;
+      
+      leftDiv.appendChild(flexDiv);
+      leftDiv.appendChild(infoP);
+      
+      const rightDiv = document.createElement('div');
+      rightDiv.className = "flex items-center gap-4";
+      
+      const precoDiv = document.createElement('div');
+      precoDiv.className = "text-right";
+      const labelSpan = document.createElement('span');
+      labelSpan.className = "text-[10px] font-bold text-slate-500 uppercase block";
+      labelSpan.textContent = "Por Grama";
+      const valorP = document.createElement('p');
+      valorP.className = "font-extrabold text-sm text-indigo-900 dark:text-indigo-300";
+      valorP.textContent = `R$ ${custo_por_grama.toFixed(3)}`;
+      precoDiv.appendChild(labelSpan);
+      precoDiv.appendChild(valorP);
+      
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = "p-2 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-slate-400 hover:text-rose-500 rounded-lg transition-colors";
+      deleteBtn.setAttribute('onclick', `UI.deleteMaterial('${mat.id}')`);
+      const icon = document.createElement('i');
+      icon.setAttribute('data-lucide', 'trash-2');
+      icon.className = "w-4 h-4";
+      deleteBtn.appendChild(icon);
+      
+      rightDiv.appendChild(precoDiv);
+      rightDiv.appendChild(deleteBtn);
+      
+      card.appendChild(leftDiv);
+      card.appendChild(rightDiv);
       container.appendChild(card);
     });
     lucide.createIcons();
@@ -220,12 +267,23 @@ const UI = {
     configEngine.proj_multiplicador_n3 = parseFloat(document.getElementById('cfg-proj-mult-n3').value) || 0;
     document.getElementById('proj-lbl-hora-base').innerText = `R$ ${configEngine.proj_hora_base.toFixed(2)}/h`;
     
-    // Persistir configurações
-    Storage.setLocal(materiais, historico, configEngine);
-    scheduleSync(); // sincroniza com a nuvem também
-    
+    Storage.setLocal(materiais, historico, configEngine, localStorage.getItem('app_password'));
+    scheduleSync();
     Utils.toast("Variáveis da Engine atualizadas!");
     UI.calculatePrice();
+  },
+
+  changePassword() {
+    const newPwd = document.getElementById('cfg-new-password').value;
+    const confirmPwd = document.getElementById('cfg-confirm-password').value;
+    if (!newPwd || newPwd.length < 6) return Utils.toast('A senha deve ter no mínimo 6 caracteres.');
+    if (newPwd !== confirmPwd) return Utils.toast('As senhas não coincidem.');
+    localStorage.setItem('app_password', newPwd);
+    API.setPassword(newPwd);
+    document.getElementById('cfg-new-password').value = '';
+    document.getElementById('cfg-confirm-password').value = '';
+    Utils.toast('Senha alterada com sucesso!');
+    scheduleSync();
   },
 
   // ---------- MARKDOWN / TEMPLATES ----------
@@ -242,10 +300,8 @@ const UI = {
     const materialObj = materiais.find(m => m.id === c.material_id);
     const materialStr = materialObj ? `${materialObj.tipo} (${materialObj.marca})` : "Material não encontrado";
     const capex_manut = c.capex_base + c.manutencao;
-    const lucro_cm_150 = c.preco_150 - c.custo_material;
     const lucro_real_150 = c.preco_150 - c.custo_total;
     const margem_150 = (lucro_real_150 / c.preco_150) * 100;
-    const lucro_cm_200 = c.preco_200 - c.custo_material;
     const lucro_real_200 = c.preco_200 - c.custo_total;
     const margem_200 = (lucro_real_200 / c.preco_200) * 100;
     const multVal = c.complexidade === 2 ? "1.5" : c.complexidade === 3 ? configEngine.multiplicador_n3.toFixed(1) : "1.0";
@@ -374,7 +430,6 @@ const UI = {
       return matchesSearch && matchesPeriod && matchesType;
     });
 
-    // Ordenação
     const col = this.sortColumn;
     const dir = this.sortDirection === 'asc' ? 1 : -1;
     filtered.sort((a, b) => {
@@ -388,25 +443,110 @@ const UI = {
 
     filtered.forEach(item => {
       const mat = materiais.find(m => m.id === item.material_id) || { tipo: "?", marca: "?" };
-      const infoMaterial = item.service_type === '3d'
-        ? `<div class="text-xs font-semibold flex items-center gap-1.5"><i data-lucide="printer" class="w-3.5 h-3.5 text-indigo-500"></i> ${mat.tipo} - ${mat.marca}</div>`
-        : `<div class="text-xs font-semibold text-emerald-400 flex items-center gap-1.5"><i data-lucide="drafting-compass" class="w-3.5 h-3.5"></i> Projeto / Engenharia</div>`;
-      const typeBadge = item.service_type === 'projeto' ? 'Serviço Técnico' : item.tipo === 'normal' ? 'Produção' : item.tipo === 'brinde' ? 'Brinde' : 'Perdida';
-      const margemBadge = item.tipo === 'perdida' ? '-100% (Refação)' : item.tipo === 'brinde' ? `Custo ${Utils.formatCurrency(item.custo_total)}` : `${item.margem?.toFixed(1) || 0}% de Margem`;
-
       const tr = document.createElement('tr');
       tr.className = "hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors";
-      tr.innerHTML = `
-        <td class="px-6 py-4"><div class="font-bold text-slate-900 dark:text-slate-100">${item.nome}</div><div class="text-xs text-slate-400 mt-0.5">${item.cliente} • ${item.data}</div></td>
-        <td class="px-6 py-4">${infoMaterial}<div class="mt-1"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${typeBadge === 'Produção' ? 'bg-slate-100 text-slate-700' : typeBadge === 'Brinde' ? 'bg-amber-100 text-amber-700' : typeBadge === 'Perdida' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}">${typeBadge}</span></div></td>
-        <td class="px-6 py-4 text-right"><div class="font-bold">${item.service_type === '3d' ? item.peso+'g' : item.tempo+'h'}</div><div class="text-xs text-slate-400">${item.service_type === '3d' ? item.tempo+'h runtime' : 'Honorário Técnico'}</div></td>
-        <td class="px-6 py-4 text-right font-medium">${Utils.formatCurrency(item.custo_total)}</td>
-        <td class="px-6 py-4 text-right font-bold">${Utils.formatCurrency(item.preco_vendido)}</td>
-        <td class="px-6 py-4 text-right"><div class="font-extrabold ${item.lucro_real >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${Utils.formatCurrency(item.lucro_real)}</div><div class="text-xs mt-0.5">${margemBadge}</div></td>
-        <td class="px-6 py-4 text-center flex gap-1 justify-center">
-          <button onclick="UI.openEditModal('${item.id}')" class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-indigo-500"><i data-lucide="edit" class="w-4 h-4"></i></button>
-          <button onclick="UI.deleteRecord('${item.id}')" class="p-1.5 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg text-slate-400 hover:text-rose-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-        </td>`;
+
+      // Coluna 1
+      const td1 = document.createElement('td');
+      td1.className = "px-6 py-4";
+      const nomeDiv = document.createElement('div');
+      nomeDiv.className = "font-bold text-slate-900 dark:text-slate-100";
+      nomeDiv.textContent = item.nome;
+      const clienteDataDiv = document.createElement('div');
+      clienteDataDiv.className = "text-xs text-slate-400 mt-0.5";
+      clienteDataDiv.textContent = `${item.cliente} • ${item.data}`;
+      td1.appendChild(nomeDiv);
+      td1.appendChild(clienteDataDiv);
+
+      // Coluna 2
+      const td2 = document.createElement('td');
+      td2.className = "px-6 py-4";
+      const infoMatDiv = document.createElement('div');
+      infoMatDiv.className = "text-xs font-semibold flex items-center gap-1.5";
+      const iconMat = document.createElement('i');
+      iconMat.setAttribute('data-lucide', item.service_type === '3d' ? 'printer' : 'drafting-compass');
+      iconMat.className = item.service_type === '3d' ? 'w-3.5 h-3.5 text-indigo-500' : 'w-3.5 h-3.5 text-emerald-400';
+      infoMatDiv.appendChild(iconMat);
+      const matText = document.createTextNode(` ${item.service_type === '3d' ? mat.tipo + ' - ' + mat.marca : 'Projeto / Engenharia'}`);
+      infoMatDiv.appendChild(matText);
+      
+      const badgeDiv = document.createElement('div');
+      badgeDiv.className = "mt-1";
+      const badgeSpan = document.createElement('span');
+      const typeBadge = item.service_type === 'projeto' ? 'Serviço Técnico' : item.tipo === 'normal' ? 'Produção' : item.tipo === 'brinde' ? 'Brinde' : 'Perdida';
+      badgeSpan.className = `px-2 py-0.5 rounded text-[10px] font-bold ${
+        typeBadge === 'Produção' ? 'bg-slate-100 text-slate-700' : 
+        typeBadge === 'Brinde' ? 'bg-amber-100 text-amber-700' : 
+        typeBadge === 'Perdida' ? 'bg-rose-100 text-rose-700' : 
+        'bg-emerald-100 text-emerald-700'
+      }`;
+      badgeSpan.textContent = typeBadge;
+      badgeDiv.appendChild(badgeSpan);
+      td2.appendChild(infoMatDiv);
+      td2.appendChild(badgeDiv);
+
+      // Coluna 3
+      const td3 = document.createElement('td');
+      td3.className = "px-6 py-4 text-right";
+      const pesoDiv = document.createElement('div');
+      pesoDiv.className = "font-bold";
+      pesoDiv.textContent = item.service_type === '3d' ? item.peso + 'g' : item.tempo + 'h';
+      const subtipoDiv = document.createElement('div');
+      subtipoDiv.className = "text-xs text-slate-400";
+      subtipoDiv.textContent = item.service_type === '3d' ? item.tempo + 'h runtime' : 'Honorário Técnico';
+      td3.appendChild(pesoDiv);
+      td3.appendChild(subtipoDiv);
+
+      // Coluna 4
+      const td4 = document.createElement('td');
+      td4.className = "px-6 py-4 text-right font-medium";
+      td4.textContent = Utils.formatCurrency(item.custo_total);
+
+      // Coluna 5
+      const td5 = document.createElement('td');
+      td5.className = "px-6 py-4 text-right font-bold";
+      td5.textContent = Utils.formatCurrency(item.preco_vendido);
+
+      // Coluna 6
+      const td6 = document.createElement('td');
+      td6.className = "px-6 py-4 text-right";
+      const lucroDiv = document.createElement('div');
+      lucroDiv.className = `font-extrabold ${item.lucro_real >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      lucroDiv.textContent = Utils.formatCurrency(item.lucro_real);
+      const margemDiv = document.createElement('div');
+      margemDiv.className = "text-xs mt-0.5";
+      const margemBadge = item.tipo === 'perdida' ? '-100% (Refação)' : item.tipo === 'brinde' ? `Custo ${Utils.formatCurrency(item.custo_total)}` : `${item.margem?.toFixed(1) || 0}% de Margem`;
+      margemDiv.textContent = margemBadge;
+      td6.appendChild(lucroDiv);
+      td6.appendChild(margemDiv);
+
+      // Coluna 7
+      const td7 = document.createElement('td');
+      td7.className = "px-6 py-4 text-center flex gap-1 justify-center";
+      const editBtn = document.createElement('button');
+      editBtn.className = "p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-indigo-500";
+      editBtn.setAttribute('onclick', `UI.openEditModal('${item.id}')`);
+      const editIcon = document.createElement('i');
+      editIcon.setAttribute('data-lucide', 'edit');
+      editIcon.className = "w-4 h-4";
+      editBtn.appendChild(editIcon);
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = "p-1.5 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg text-slate-400 hover:text-rose-500";
+      deleteBtn.setAttribute('onclick', `UI.deleteRecord('${item.id}')`);
+      const deleteIcon = document.createElement('i');
+      deleteIcon.setAttribute('data-lucide', 'trash-2');
+      deleteIcon.className = "w-4 h-4";
+      deleteBtn.appendChild(deleteIcon);
+      td7.appendChild(editBtn);
+      td7.appendChild(deleteBtn);
+
+      tr.appendChild(td1);
+      tr.appendChild(td2);
+      tr.appendChild(td3);
+      tr.appendChild(td4);
+      tr.appendChild(td5);
+      tr.appendChild(td6);
+      tr.appendChild(td7);
       tbody.appendChild(tr);
     });
     lucide.createIcons();

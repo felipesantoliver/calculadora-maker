@@ -1,7 +1,18 @@
 const API = {
+  _password: null,
+
+  setPassword(pwd) {
+    this._password = pwd;
+  },
+
   async loadData() {
-    const res = await fetch('/api/data');
-    if (!res.ok) throw new Error('Falha ao carregar dados');
+    const headers = { 'Content-Type': 'application/json' };
+    if (this._password) headers['x-password'] = this._password;
+    const res = await fetch('/api/data', { headers });
+    if (!res.ok) {
+      if (res.status === 401) throw new Error('Senha inválida');
+      throw new Error('Falha ao carregar dados');
+    }
     const data = await res.json();
     return {
       materiais: data.materials_json || [],
@@ -10,10 +21,16 @@ const API = {
   },
 
   async saveData(materiais, historico) {
-    await fetch('/api/sync', {
+    const headers = { 'Content-Type': 'application/json' };
+    if (this._password) headers['x-password'] = this._password;
+    const res = await fetch('/api/sync', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ materials_json: materiais, history_json: historico })
     });
+    if (!res.ok) {
+      if (res.status === 401) throw new Error('Senha inválida');
+      throw new Error('Falha ao salvar dados');
+    }
   }
 };
