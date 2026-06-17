@@ -1,33 +1,55 @@
 // Variáveis globais (acessíveis via window)
-let configEngine = { /* mesma configuração inicial */ };
-let materiais = [ /* dados iniciais */ ];
+let materiais = [];
 let historico = [];
+let configEngine = {
+  energia_hora: 0.85,
+  capex_base: 0.50,
+  manutencao_porcentagem: 0.05,
+  mao_obra_hora: 12.50,
+  multiplicador_n2: 1.5,
+  multiplicador_n3: 2.2,
+  preco_minimo: 10.00,
+  proj_hora_base: 50.00,
+  proj_multiplicador_n3: 2.0
+};
 let currentServiceMode = '3d';
 let syncTimeout;
 
 async function init() {
   // Inicializar tema
   if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
-  // Carregar dados
+
+  // Carregar configurações da engine do localStorage (se houver)
   const local = Storage.getLocal();
+  if (local.configEngine) {
+    Object.assign(configEngine, local.configEngine);
+  }
+
   try {
     const cloud = await API.loadData();
     if (cloud) {
-      materiais = cloud.materiais;
-      historico = cloud.historico;
-      Storage.setLocal(materiais, historico);
+      // Atualiza os arrays in-place para manter a referência
+      materiais.splice(0, materiais.length, ...cloud.materiais);
+      historico.splice(0, historico.length, ...cloud.historico);
+      Storage.setLocal(materiais, historico, configEngine);
     } else if (local.materiais && local.historico) {
-      materiais = local.materiais;
-      historico = local.historico;
+      materiais.splice(0, materiais.length, ...local.materiais);
+      historico.splice(0, historico.length, ...local.historico);
       Utils.toast('Modo offline – usando cache local');
     }
   } catch {
     if (local.materiais && local.historico) {
-      materiais = local.materiais;
-      historico = local.historico;
+      materiais.splice(0, materiais.length, ...local.materiais);
+      historico.splice(0, historico.length, ...local.historico);
       Utils.toast('Sem conexão – usando dados locais');
     }
   }
+
+  // Atribui ao window após os dados estarem carregados
+  window.materiais = materiais;
+  window.historico = historico;
+  window.configEngine = configEngine;
+
   // Popular interface
   UI.populateMaterialDropdowns();
   UI.fillConfigForm();
@@ -42,12 +64,11 @@ function scheduleSync() {
   syncTimeout = setTimeout(async () => {
     try {
       await API.saveData(materiais, historico);
-      Storage.setLocal(materiais, historico);
+      Storage.setLocal(materiais, historico, configEngine);
     } catch { /* offline */ }
   }, 2000);
 }
 
-// Toda vez que alterar materiais ou historico, chame scheduleSync()
 // Expor funções globais necessárias
 window.materiais = materiais;
 window.historico = historico;

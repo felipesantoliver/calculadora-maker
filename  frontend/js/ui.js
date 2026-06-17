@@ -219,6 +219,11 @@ const UI = {
     configEngine.proj_hora_base = parseFloat(document.getElementById('cfg-proj-hora-base').value) || 0;
     configEngine.proj_multiplicador_n3 = parseFloat(document.getElementById('cfg-proj-mult-n3').value) || 0;
     document.getElementById('proj-lbl-hora-base').innerText = `R$ ${configEngine.proj_hora_base.toFixed(2)}/h`;
+    
+    // Persistir configurações
+    Storage.setLocal(materiais, historico, configEngine);
+    scheduleSync(); // sincroniza com a nuvem também
+    
     Utils.toast("Variáveis da Engine atualizadas!");
     UI.calculatePrice();
   },
@@ -228,7 +233,6 @@ const UI = {
     if (window.currentCalculatedResults?.service_type !== '3d') return Utils.toast("Selecione Manufatura 3D.");
     const pecaNome = document.getElementById('calc-peca-nome').value.trim() || "Peça Exemplo";
     const clienteNome = document.getElementById('calc-cliente-nome').value.trim() || "Consumidor Final";
-    // (mesma lógica antiga de montagem do markdown, adaptada para usar UI.renderMarkdown)
     const markdown = UI.buildMarkdown(pecaNome, clienteNome);
     navigator.clipboard.writeText(markdown).then(() => Utils.toast("Relatório copiado!"));
   },
@@ -236,7 +240,7 @@ const UI = {
   buildMarkdown(pecaNome, clienteNome) {
     const c = window.currentCalculatedResults;
     const materialObj = materiais.find(m => m.id === c.material_id);
-    const materialStr = `${materialObj.tipo} (${materialObj.marca})`;
+    const materialStr = materialObj ? `${materialObj.tipo} (${materialObj.marca})` : "Material não encontrado";
     const capex_manut = c.capex_base + c.manutencao;
     const lucro_cm_150 = c.preco_150 - c.custo_material;
     const lucro_real_150 = c.preco_150 - c.custo_total;
@@ -245,8 +249,8 @@ const UI = {
     const lucro_real_200 = c.preco_200 - c.custo_total;
     const margem_200 = (lucro_real_200 / c.preco_200) * 100;
     const multVal = c.complexidade === 2 ? "1.5" : c.complexidade === 3 ? configEngine.multiplicador_n3.toFixed(1) : "1.0";
-    
-    return `**Precificação — ${pecaNome}**\n\nCliente: ${clienteNome}\nMaterial: ${materialStr}\nPeso: ${c.peso}g\nTempo: ${c.tempo}h\nComplexidade: Nível ${c.complexidade}\n\n---\n\n### Tabela de custos\n| Descrição | Valor |\n| :--- | :--- |\n| Custo de material | ${Utils.formatCurrency(c.custo_material)} |\n| CAPEX (perda + manutenção) | ${Utils.formatCurrency(capex_manut)} |\n| Gasto com energia | ${Utils.formatCurrency(c.energia)} |\n| **Custo total de impressão** | **${Utils.formatCurrency(c.custo_total)}** |\n\n### Tabela de mão de obra\n| Descrição | Valor |\n| :--- | :--- |\n| Tempo | ${c.tempo}h |\n| Valor base/h | R$ 12,50 |\n| Multiplicador | ${multVal} |\n| **Mão de obra total** | **${Utils.formatCurrency(c.mao_obra)}** |\n\n### Tabela de cenários de venda\n| Cenário | Preço final | Lucro total | Margem líquida |\n| :--- | :--- | :--- | :--- |\n| 150% | ${Utils.formatCurrency(c.preco_150)} | ${Utils.formatCurrency(lucro_real_150)} | ${margem_150.toFixed(2).replace('.', ',')}% |\n| 200% | ${Utils.formatCurrency(c.preco_200)} | ${Utils.formatCurrency(lucro_real_200)} | ${margem_200.toFixed(2).replace('.', ',')}% |`;
+
+    return `**Precificação — ${pecaNome}**\n\nCliente: ${clienteNome}\nMaterial: ${materialStr}\nPeso: ${c.peso}g\nTempo: ${c.tempo}h\nComplexidade: Nível ${c.complexidade}\n\n---\n\n### Tabela de custos\n| Descrição | Valor |\n| :--- | :--- |\n| Custo de material | ${Utils.formatCurrency(c.custo_material)} |\n| CAPEX (perda + manutenção) | ${Utils.formatCurrency(capex_manut)} |\n| Gasto com energia | ${Utils.formatCurrency(c.energia)} |\n| **Custo total de impressão** | **${Utils.formatCurrency(c.custo_total)}** |\n\n### Tabela de mão de obra\n| Descrição | Valor |\n| :--- | :--- |\n| Tempo | ${c.tempo}h |\n| Valor base/h | R$ ${configEngine.mao_obra_hora.toFixed(2)} |\n| Multiplicador | ${multVal} |\n| **Mão de obra total** | **${Utils.formatCurrency(c.mao_obra)}** |\n\n### Tabela de cenários de venda\n| Cenário | Preço final | Lucro total | Margem líquida |\n| :--- | :--- | :--- | :--- |\n| 150% | ${Utils.formatCurrency(c.preco_150)} | ${Utils.formatCurrency(lucro_real_150)} | ${margem_150.toFixed(2).replace('.', ',')}% |\n| 200% | ${Utils.formatCurrency(c.preco_200)} | ${Utils.formatCurrency(lucro_real_200)} | ${margem_200.toFixed(2).replace('.', ',')}% |`;
   },
 
   openTemplateModal() { document.getElementById('template-modal').classList.remove('hidden'); },
